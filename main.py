@@ -282,8 +282,23 @@ class GrayImageApp(App):
         return layout
 
     def show_file_selector(self, instance):
-        popup = FileBrowserPopup(callback=self.load_image)
-        popup.open()
+        if "android" in sys.platform:
+            # Android上使用plyer文件选择器
+            try:
+                from plyer import filechooser
+
+                path = filechooser.open_file(
+                    title="选择图片",
+                    filters=[("Images", "*.png;*.jpg;*.jpeg;*.webp;*.bmp;*.gif")],
+                )
+                if path:
+                    self.load_image(path[0])
+            except Exception as e:
+                self.status_label.text = f"错误: {str(e)}"
+        else:
+            # 桌面平台使用自定义文件浏览器
+            popup = FileBrowserPopup(callback=self.load_image)
+            popup.open()
 
     def load_image(self, path):
         try:
@@ -327,21 +342,38 @@ class GrayImageApp(App):
 
     def save_image(self, instance):
         if self.gray_image:
-            if self.original_path:
-                default_name = (
-                    os.path.splitext(os.path.basename(self.original_path))[0]
-                    + "_gray.png"
-                )
-            else:
-                default_name = "gray.png"
+            if "android" in sys.platform:
+                # Android上使用plyer文件保存
+                try:
+                    from plyer import filechooser
 
-            download_path = os.path.expanduser("~/Downloads")
-            final_path = os.path.join(download_path, default_name)
-            try:
-                self.gray_image.save(final_path)
-                self.status_label.text = f"已保存到下载目录!"
-            except Exception as e:
-                self.status_label.text = f"错误: {str(e)}"
+                    path = filechooser.save_file(
+                        title="保存灰度图",
+                        filters=[("PNG", "*.png")],
+                        default_name="gray.png",
+                    )
+                    if path:
+                        self.gray_image.save(path)
+                        self.status_label.text = f"已保存: {path}"
+                except Exception as e:
+                    self.status_label.text = f"保存错误: {str(e)}"
+            else:
+                # 桌面平台原逻辑
+                if self.original_path:
+                    default_name = (
+                        os.path.splitext(os.path.basename(self.original_path))[0]
+                        + "_gray.png"
+                    )
+                else:
+                    default_name = "gray.png"
+
+                download_path = os.path.expanduser("~/Downloads")
+                final_path = os.path.join(download_path, default_name)
+                try:
+                    self.gray_image.save(final_path)
+                    self.status_label.text = f"已保存到下载目录!"
+                except Exception as e:
+                    self.status_label.text = f"错误: {str(e)}"
 
 
 if __name__ == "__main__":
