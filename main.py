@@ -391,21 +391,32 @@ class GrayImageApp(App):
 
             # 使用正确的临时文件路径
             if is_android():
-                from plyer import storagepath
+                # 使用 Android Context.getCacheDir() 获取缓存目录
+                try:
+                    from jnius import autoclass
+                    from android import mActivity
 
-                # 使用应用专属缓存目录
-                app_dir = storagepath.get_application_dir()
-                if app_dir:
-                    cache_dir = os.path.join(app_dir, "cache")
-                else:
-                    # 备选：使用外部存储的应用目录
-                    external_dir = storagepath.get_external_storage_dir()
-                    if external_dir:
-                        cache_dir = os.path.join(
-                            external_dir, "Android/data/org.example.grayimage/cache"
-                        )
+                    Context = autoclass("android.content.Context")
+                    context = mActivity.getApplicationContext()
+                    cache_dir = context.getCacheDir().getAbsolutePath()
+                except Exception:
+                    # 备选方案：使用 plyer.storagepath
+                    from plyer import storagepath
+
+                    app_dir = storagepath.get_application_dir()
+                    if app_dir:
+                        cache_dir = os.path.join(app_dir, "cache")
                     else:
-                        cache_dir = "/sdcard/Android/data/org.example.grayimage/cache"
+                        # 最后备选：使用外部存储
+                        external_dir = storagepath.get_external_storage_dir()
+                        if external_dir:
+                            cache_dir = os.path.join(
+                                external_dir, "Android/data/org.example.grayimage/cache"
+                            )
+                        else:
+                            cache_dir = (
+                                "/sdcard/Android/data/org.example.grayimage/cache"
+                            )
 
                 # 确保目录存在
                 os.makedirs(cache_dir, exist_ok=True)
@@ -432,21 +443,32 @@ class GrayImageApp(App):
 
             # 使用正确的临时文件路径
             if is_android():
-                from plyer import storagepath
+                # 使用 Android Context.getCacheDir() 获取缓存目录
+                try:
+                    from jnius import autoclass
+                    from android import mActivity
 
-                # 使用应用专属缓存目录
-                app_dir = storagepath.get_application_dir()
-                if app_dir:
-                    cache_dir = os.path.join(app_dir, "cache")
-                else:
-                    # 备选：使用外部存储的应用目录
-                    external_dir = storagepath.get_external_storage_dir()
-                    if external_dir:
-                        cache_dir = os.path.join(
-                            external_dir, "Android/data/org.example.grayimage/cache"
-                        )
+                    Context = autoclass("android.content.Context")
+                    context = mActivity.getApplicationContext()
+                    cache_dir = context.getCacheDir().getAbsolutePath()
+                except Exception:
+                    # 备选方案：使用 plyer.storagepath
+                    from plyer import storagepath
+
+                    app_dir = storagepath.get_application_dir()
+                    if app_dir:
+                        cache_dir = os.path.join(app_dir, "cache")
                     else:
-                        cache_dir = "/sdcard/Android/data/org.example.grayimage/cache"
+                        # 最后备选：使用外部存储
+                        external_dir = storagepath.get_external_storage_dir()
+                        if external_dir:
+                            cache_dir = os.path.join(
+                                external_dir, "Android/data/org.example.grayimage/cache"
+                            )
+                        else:
+                            cache_dir = (
+                                "/sdcard/Android/data/org.example.grayimage/cache"
+                            )
 
                 # 确保目录存在
                 os.makedirs(cache_dir, exist_ok=True)
