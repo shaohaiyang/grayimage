@@ -36,7 +36,10 @@ jobs:
     - name: Accept Android licenses
       run: |
         yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
-        yes | $ANDROID_HOME/platform-tools/adb kill-server || true
+
+    - name: Install Android SDK components
+      run: |
+        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-34" "build-tools;34.0.0" "platform-tools"
 
     - name: Build APK
       run: |
