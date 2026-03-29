@@ -370,6 +370,14 @@ class GrayImageApp(App):
 
             img = Image.open(path)
 
+            # 验证图片完整性
+            try:
+                img.verify()
+                # 重新打开图片，因为 verify() 会关闭文件
+                img = Image.open(path)
+            except Exception as e:
+                raise Exception(f"图片文件损坏或不完整: {str(e)}")
+
             if img.mode in ("RGBA", "P", "LA"):
                 background = Image.new("RGB", img.size, (255, 255, 255))
                 if img.mode == "P":
@@ -385,9 +393,22 @@ class GrayImageApp(App):
             if is_android():
                 from plyer import storagepath
 
-                cache_dir = storagepath.get_application_dir()
-                if not cache_dir:
-                    cache_dir = "/data/data/org.example.grayimage/files"
+                # 使用应用专属缓存目录
+                app_dir = storagepath.get_application_dir()
+                if app_dir:
+                    cache_dir = os.path.join(app_dir, "cache")
+                else:
+                    # 备选：使用外部存储的应用目录
+                    external_dir = storagepath.get_external_storage_dir()
+                    if external_dir:
+                        cache_dir = os.path.join(
+                            external_dir, "Android/data/org.example.grayimage/cache"
+                        )
+                    else:
+                        cache_dir = "/sdcard/Android/data/org.example.grayimage/cache"
+
+                # 确保目录存在
+                os.makedirs(cache_dir, exist_ok=True)
                 save_path = os.path.join(cache_dir, "original.png")
             else:
                 save_path = "/tmp/original.png"
@@ -413,9 +434,22 @@ class GrayImageApp(App):
             if is_android():
                 from plyer import storagepath
 
-                cache_dir = storagepath.get_application_dir()
-                if not cache_dir:
-                    cache_dir = "/data/data/org.example.grayimage/files"
+                # 使用应用专属缓存目录
+                app_dir = storagepath.get_application_dir()
+                if app_dir:
+                    cache_dir = os.path.join(app_dir, "cache")
+                else:
+                    # 备选：使用外部存储的应用目录
+                    external_dir = storagepath.get_external_storage_dir()
+                    if external_dir:
+                        cache_dir = os.path.join(
+                            external_dir, "Android/data/org.example.grayimage/cache"
+                        )
+                    else:
+                        cache_dir = "/sdcard/Android/data/org.example.grayimage/cache"
+
+                # 确保目录存在
+                os.makedirs(cache_dir, exist_ok=True)
                 save_path = os.path.join(cache_dir, "gray.png")
             else:
                 save_path = "/tmp/gray.png"
