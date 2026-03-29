@@ -13,14 +13,21 @@ from datetime import datetime  # 用于生成时间戳文件名
 
 import platform
 import sys
+from kivy.utils import platform as kivy_platform
 
 SYSTEM = platform.system()
+
+
+def is_android():
+    """检测是否运行在 Android 平台"""
+    return kivy_platform == "android" or "ANDROID_ARGUMENT" in os.environ
+
 
 if SYSTEM == "Darwin":
     CHINESE_FONT = "/System/Library/Fonts/STHeiti Medium.ttc"
 elif SYSTEM == "Windows":
     CHINESE_FONT = "simsun.ttc"
-elif "android" in sys.platform:
+elif is_android():
     CHINESE_FONT = None
 else:
     CHINESE_FONT = "DroidSansFallback"
@@ -62,7 +69,7 @@ class FileBrowserPopup(Popup):
         self.callback = callback
 
         # 根据平台设置正确的默认路径
-        if "android" in sys.platform:
+        if is_android():
             try:
                 from plyer import storagepath
 
@@ -99,7 +106,7 @@ class FileBrowserPopup(Popup):
         path_layout = BoxLayout(size_hint_y=None, height=35, spacing=5)
 
         # 根据平台定义不同的快捷路径
-        if "android" in sys.platform:
+        if is_android():
             # Android 平台路径
             quick_paths = [
                 ("根目录", "/sdcard"),
@@ -151,7 +158,7 @@ class FileBrowserPopup(Popup):
         self.refresh_files()
 
     def go_to_path(self, path):
-        if "android" in sys.platform:
+        if is_android():
             # Android 直接使用路径（不展开 ~）
             self.current_path = path
         else:
@@ -166,7 +173,7 @@ class FileBrowserPopup(Popup):
             return
 
         # 根据平台判断是否在根目录
-        if "android" in sys.platform:
+        if is_android():
             root_path = "/sdcard"
         else:
             root_path = os.path.expanduser("~")
@@ -330,7 +337,7 @@ class GrayImageApp(App):
         return layout
 
     def show_file_selector(self, instance):
-        if "android" in sys.platform:
+        if is_android():
             # Android上使用plyer文件选择器
             try:
                 from plyer import filechooser
@@ -375,7 +382,7 @@ class GrayImageApp(App):
                 self.original_image = img.convert("RGB")
 
             # 使用正确的临时文件路径
-            if "android" in sys.platform:
+            if is_android():
                 from plyer import storagepath
 
                 cache_dir = storagepath.get_cache_dir()
@@ -403,7 +410,7 @@ class GrayImageApp(App):
             self.gray_image = self.original_image.convert("L")
 
             # 使用正确的临时文件路径
-            if "android" in sys.platform:
+            if is_android():
                 from plyer import storagepath
 
                 cache_dir = storagepath.get_cache_dir()
@@ -419,7 +426,7 @@ class GrayImageApp(App):
 
     def save_image(self, instance):
         if self.gray_image:
-            if "android" in sys.platform:
+            if is_android():
                 # Android 上保存（选项 1：让用户选择保存位置）
                 try:
                     from plyer import filechooser
