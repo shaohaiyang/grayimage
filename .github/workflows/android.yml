@@ -20,6 +20,8 @@ jobs:
 
     - name: Install dependencies
       run: |
+        sudo apt-get update
+        sudo apt-get install -y libtool autoconf automake
         pip install --upgrade pip
         pip install setuptools
         pip install buildozer cython pillow plyer
