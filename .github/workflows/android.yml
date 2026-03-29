@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     
     steps:
     - name: Checkout code
@@ -17,20 +17,6 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
-
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libtool autoconf automake pkg-config
-        which libtool
-        which autoconf
-        which automake
-
-    - name: Install Python dependencies
-      run: |
-        pip install --upgrade pip
-        pip install setuptools wheel
-        pip install buildozer==1.5.0 cython pillow
 
     - name: Set up JDK
       uses: actions/setup-java@v4
@@ -48,18 +34,34 @@ jobs:
         echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> $ANDROID_HOME/licenses/android-sdk-license
         echo "84831b9409646a918e30573bab4c9c91346d8abd" > $ANDROID_HOME/licenses/android-sdk-preview-license
 
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libtool autoconf automake pkg-config
+
+    - name: Install Python dependencies
+      run: |
+        pip install --upgrade pip
+        pip install setuptools wheel
+        pip install buildozer==1.5.0 cython pillow
+
     - name: Build APK
       run: |
         export ANDROID_HOME=/usr/local/lib/android/sdk
         export JAVA_HOME=/usr/lib/jvm/temurin-17-jdk-amd64
+        export PATH="/usr/lib/jvm/temurin-17-jdk-amd64/bin:$PATH"
+        
+        # Initialize buildozer
+        buildozer init
+        
+        # Build with debug output
         buildozer android debug 2>&1 | tee build.log
-        echo "=== Build Log ==="
-        cat build.log
-        ls -la bin/ 2>/dev/null || echo "No bin directory"
-        find . -name "*.apk" 2>/dev/null
 
     - name: Find APK
-      run: find . -name "*.apk" -type f
+      run: |
+        echo "=== Build completed ==="
+        ls -la bin/ 2>/dev/null || echo "No bin directory"
+        find . -name "*.apk" -type f 2>/dev/null || echo "No APK found"
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
@@ -67,5 +69,4 @@ jobs:
         name: build-artifacts
         path: |
           bin/*.apk
-          .buildozer/**/*.apk
           build.log
