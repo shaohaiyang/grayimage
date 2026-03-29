@@ -21,7 +21,10 @@ jobs:
     - name: Install system dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y libtool autoconf automake pkg-config openjdk-17-jdk
+        sudo apt-get install -y libtool autoconf automake pkg-config
+        which libtool
+        which autoconf
+        which automake
 
     - name: Install Python dependencies
       run: |
