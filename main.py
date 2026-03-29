@@ -60,7 +60,31 @@ class FileBrowserPopup(Popup):
     def __init__(self, callback, **kwargs):
         super().__init__(**kwargs)
         self.callback = callback
-        self.current_path = os.path.expanduser("~/Pictures")
+
+        # 根据平台设置正确的默认路径
+        if "android" in sys.platform:
+            try:
+                from plyer import storagepath
+
+                # 尝试使用 Downloads 或 Pictures 目录
+                downloads_dir = storagepath.get_downloads_dir()
+                if downloads_dir and os.path.exists(downloads_dir):
+                    self.current_path = downloads_dir
+                else:
+                    pictures_dir = storagepath.get_pictures_dir()
+                    if pictures_dir and os.path.exists(pictures_dir):
+                        self.current_path = pictures_dir
+                    else:
+                        # 备选：使用外部存储根目录
+                        external_dir = storagepath.get_external_storage_dir()
+                        self.current_path = external_dir if external_dir else "/sdcard"
+            except:
+                # 如果 plyer 不可用，使用默认 Android 路径
+                self.current_path = "/sdcard"
+        else:
+            # macOS/Linux 使用 Pictures 目录
+            self.current_path = os.path.expanduser("~/Pictures")
+
         self.build()
 
     def build(self):
@@ -74,11 +98,23 @@ class FileBrowserPopup(Popup):
 
         path_layout = BoxLayout(size_hint_y=None, height=35, spacing=5)
 
-        for name, path in [
-            ("Home", "~"),
-            ("图片", "~/Pictures"),
-            ("桌面", "~/Desktop"),
-        ]:
+        # 根据平台定义不同的快捷路径
+        if "android" in sys.platform:
+            # Android 平台路径
+            quick_paths = [
+                ("根目录", "/sdcard"),
+                ("下载", "/sdcard/Download"),
+                ("图片", "/sdcard/Pictures"),
+            ]
+        else:
+            # macOS/Linux 平台路径
+            quick_paths = [
+                ("Home", "~"),
+                ("图片", "~/Pictures"),
+                ("桌面", "~/Desktop"),
+            ]
+
+        for name, path in quick_paths:
             btn = Button(
                 text=name, font_name=get_font_name(), font_size="11sp", size_hint_x=0.2
             )
@@ -115,7 +151,12 @@ class FileBrowserPopup(Popup):
         self.refresh_files()
 
     def go_to_path(self, path):
-        self.current_path = os.path.expanduser(path)
+        if "android" in sys.platform:
+            # Android 直接使用路径（不展开 ~）
+            self.current_path = path
+        else:
+            # macOS/Linux 使用 expanduser 展开 ~
+            self.current_path = os.path.expanduser(path)
         self.refresh_files()
 
     def refresh_files(self, *args):
@@ -124,7 +165,13 @@ class FileBrowserPopup(Popup):
         if not os.path.isdir(self.current_path):
             return
 
-        if self.current_path != os.path.expanduser("~"):
+        # 根据平台判断是否在根目录
+        if "android" in sys.platform:
+            root_path = "/sdcard"
+        else:
+            root_path = os.path.expanduser("~")
+
+        if self.current_path != root_path:
             parent = os.path.dirname(self.current_path)
             btn = Button(
                 text=".. 返回上级",
