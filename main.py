@@ -1,5 +1,6 @@
 import sys
 import os
+import tempfile
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
@@ -422,7 +423,9 @@ class GrayImageApp(App):
                 os.makedirs(cache_dir, exist_ok=True)
                 save_path = os.path.join(cache_dir, "original.png")
             else:
-                save_path = "/tmp/original.png"
+                cache_dir = tempfile.gettempdir()
+                save_path = os.path.join(cache_dir, "original.png")
+
 
             self.original_image.save(save_path)
             self.original_img.source = save_path
@@ -474,7 +477,8 @@ class GrayImageApp(App):
                 os.makedirs(cache_dir, exist_ok=True)
                 save_path = os.path.join(cache_dir, "gray.png")
             else:
-                save_path = "/tmp/gray.png"
+                cache_dir = tempfile.gettempdir()
+                save_path = os.path.join(cache_dir, "gray.png")
 
             self.gray_image.save(save_path)
             self.gray_img.source = save_path
