@@ -3,10 +3,9 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
 from kivy.uix.image import Image as KivyImage
 from kivy.uix.label import Label
-from kivy.uix.filechooser import FileChooserIconView
-from kivy.graphics import Color, Rectangle
 from PIL import Image
 import os
+import sys
 
 
 class GrayImageApp(App):
@@ -15,7 +14,7 @@ class GrayImageApp(App):
 
         # 标题
         title = Label(
-            text="图片灰度化", font_size="28sp", bold=True, color=(0.2, 0.2, 0.2, 1)
+            text="Image Gray", font_size="28sp", bold=True, color=(0.2, 0.2, 0.2, 1)
         )
         layout.add_widget(title)
 
@@ -25,13 +24,13 @@ class GrayImageApp(App):
         )
 
         self.select_btn = Button(
-            text="选择图片", background_color=(0.9, 0.9, 0.9, 1), color=(0, 0, 0, 1)
+            text="Select Image", background_color=(0.9, 0.9, 0.9, 1), color=(0, 0, 0, 1)
         )
         self.select_btn.bind(on_press=self.select_image)
         btn_layout.add_widget(self.select_btn)
 
         self.save_btn = Button(
-            text="保存灰度图",
+            text="Save Gray",
             background_color=(0.9, 0.9, 0.9, 1),
             color=(0, 0, 0, 1),
             disabled=True,
@@ -43,7 +42,7 @@ class GrayImageApp(App):
 
         # 状态标签
         self.status_label = Label(
-            text="请选择图片", font_size="14sp", color=(0.5, 0.5, 0.5, 1)
+            text="Select an image", font_size="14sp", color=(0.5, 0.5, 0.5, 1)
         )
         layout.add_widget(self.status_label)
 
@@ -53,7 +52,9 @@ class GrayImageApp(App):
         # 原图
         left_box = BoxLayout(orientation="vertical")
         left_box.add_widget(
-            Label(text="原图", font_size="16sp", bold=True, color=(0.2, 0.2, 0.2, 1))
+            Label(
+                text="Original", font_size="16sp", bold=True, color=(0.2, 0.2, 0.2, 1)
+            )
         )
         self.original_img = KivyImage()
         left_box.add_widget(self.original_img)
@@ -62,7 +63,7 @@ class GrayImageApp(App):
         # 灰度图
         right_box = BoxLayout(orientation="vertical")
         right_box.add_widget(
-            Label(text="灰度图", font_size="16sp", bold=True, color=(0.2, 0.2, 0.2, 1))
+            Label(text="Gray", font_size="16sp", bold=True, color=(0.2, 0.2, 0.2, 1))
         )
         self.gray_img = KivyImage()
         right_box.add_widget(self.gray_img)
@@ -77,18 +78,21 @@ class GrayImageApp(App):
         return layout
 
     def select_image(self, instance):
-        # 使用文件选择器
-        from plyer import filechooser
+        try:
+            from plyer import filechooser
 
-        path = filechooser.open_file(
-            title="选择图片", filters=[("图片文件", "*.png;*.jpg;*.jpeg;*.webp;*.bmp")]
-        )
-        if path:
-            self.load_image(path[0])
+            path = filechooser.open_file(
+                title="Select Image",
+                filters=[("Images", "*.png;*.jpg;*.jpeg;*.webp;*.bmp")],
+            )
+            if path:
+                self.load_image(path[0])
+        except Exception as e:
+            self.status_label.text = f"Error: {str(e)}"
 
     def load_image(self, path):
         try:
-            self.status_label.text = f"加载: {os.path.basename(path)}"
+            self.status_label.text = f"Loading: {os.path.basename(path)}"
             self.original_path = path
 
             img = Image.open(path)
@@ -104,38 +108,41 @@ class GrayImageApp(App):
             else:
                 self.original_image = img.convert("RGB")
 
-            # 显示原图
-            self.original_image.save("/tmp/original.png")
-            self.original_img.source = "/tmp/original.png"
+            save_path = "/tmp/original.png"
+            self.original_image.save(save_path)
+            self.original_img.source = save_path
             self.original_img.reload()
 
             self.process_image()
             self.save_btn.disabled = False
-            self.status_label.text = "处理完成"
+            self.status_label.text = "Done"
 
         except Exception as e:
-            self.status_label.text = f"错误: {str(e)}"
+            self.status_label.text = f"Error: {str(e)}"
 
     def process_image(self):
         if self.original_image:
             self.gray_image = self.original_image.convert("L")
-            self.gray_image.save("/tmp/gray.png")
-            self.gray_img.source = "/tmp/gray.png"
+            save_path = "/tmp/gray.png"
+            self.gray_image.save(save_path)
+            self.gray_img.source = save_path
             self.gray_img.reload()
 
     def save_image(self, instance):
         if self.gray_image:
-            from plyer import filechooser
+            try:
+                from plyer import filechooser
 
-            path = filechooser.save_file(
-                title="保存灰度图", filters=[("PNG", "*.png")], default_name="gray.png"
-            )
-            if path:
-                try:
+                path = filechooser.save_file(
+                    title="Save Gray Image",
+                    filters=[("PNG", "*.png")],
+                    default_name="gray.png",
+                )
+                if path:
                     self.gray_image.save(path)
-                    self.status_label.text = f"已保存: {path}"
-                except Exception as e:
-                    self.status_label.text = f"保存失败: {str(e)}"
+                    self.status_label.text = f"Saved: {path}"
+            except Exception as e:
+                self.status_label.text = f"Error: {str(e)}"
 
 
 if __name__ == "__main__":
