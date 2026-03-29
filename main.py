@@ -9,6 +9,7 @@ from kivy.uix.popup import Popup
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.gridlayout import GridLayout
 from PIL import Image
+from datetime import datetime  # 用于生成时间戳文件名
 
 import platform
 import sys
@@ -287,14 +288,22 @@ class GrayImageApp(App):
             try:
                 from plyer import filechooser
 
-                path = filechooser.open_file(
+                # 定义回调函数处理选择的文件（Android 是异步的）
+                def on_file_selected(selection):
+                    if selection and len(selection) > 0:
+                        self.load_image(selection[0])
+
+                # 使用 MIME 类型过滤，不是通配符
+                filechooser.open_file(
                     title="选择图片",
-                    filters=[("Images", "*.png;*.jpg;*.jpeg;*.webp;*.bmp;*.gif")],
+                    filters=["image"],  # MIME type: image/*
+                    on_selection=on_file_selected,  # Android 必须使用回调
                 )
-                if path:
-                    self.load_image(path[0])
             except Exception as e:
-                self.status_label.text = f"错误: {str(e)}"
+                self.status_label.text = f"文件选择错误: {str(e)}"
+                import traceback
+
+                traceback.print_exc()
         else:
             # 桌面平台使用自定义文件浏览器
             popup = FileBrowserPopup(callback=self.load_image)
@@ -318,7 +327,17 @@ class GrayImageApp(App):
             else:
                 self.original_image = img.convert("RGB")
 
-            save_path = "/tmp/original.png"
+            # 使用正确的临时文件路径
+            if "android" in sys.platform:
+                from plyer import storagepath
+
+                cache_dir = storagepath.get_cache_dir()
+                if not cache_dir:
+                    cache_dir = "/data/data/org.example.grayimage/cache"
+                save_path = os.path.join(cache_dir, "original.png")
+            else:
+                save_path = "/tmp/original.png"
+
             self.original_image.save(save_path)
             self.original_img.source = save_path
             self.original_img.reload()
@@ -335,7 +354,18 @@ class GrayImageApp(App):
     def process_image(self):
         if self.original_image:
             self.gray_image = self.original_image.convert("L")
-            save_path = "/tmp/gray.png"
+
+            # 使用正确的临时文件路径
+            if "android" in sys.platform:
+                from plyer import storagepath
+
+                cache_dir = storagepath.get_cache_dir()
+                if not cache_dir:
+                    cache_dir = "/data/data/org.example.grayimage/cache"
+                save_path = os.path.join(cache_dir, "gray.png")
+            else:
+                save_path = "/tmp/gray.png"
+
             self.gray_image.save(save_path)
             self.gray_img.source = save_path
             self.gray_img.reload()
@@ -343,20 +373,71 @@ class GrayImageApp(App):
     def save_image(self, instance):
         if self.gray_image:
             if "android" in sys.platform:
-                # Android上使用plyer文件保存
+                # Android 上保存（选项 1：让用户选择保存位置）
                 try:
                     from plyer import filechooser
+                    from plyer import storagepath
+                    from io import BytesIO
 
-                    path = filechooser.save_file(
+                    # 生成默认文件名
+                    if self.original_path:
+                        base_name = os.path.splitext(
+                            os.path.basename(self.original_path)
+                        )[0]
+                        default_name = f"{base_name}_gray.png"
+                    else:
+                        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                        default_name = f"gray_{timestamp}.png"
+
+                    # 定义保存回调函数
+                    def save_callback(file_output_stream):
+                        """Android 保存回调函数"""
+                        try:
+                            # 将 PIL 图片保存到字节流
+                            buffer = BytesIO()
+                            self.gray_image.save(buffer, format="PNG")
+                            file_output_stream.write(buffer.getvalue())
+                            file_output_stream.close()
+                            self.status_label.text = "保存成功!"
+                        except Exception as e:
+                            self.status_label.text = f"保存错误: {str(e)}"
+
+                    # 尝试使用 filechooser.save_file()
+                    filechooser.save_file(
                         title="保存灰度图",
-                        filters=[("PNG", "*.png")],
-                        default_name="gray.png",
+                        filters=["image"],  # MIME type
+                        default_name=default_name,
+                        callback=save_callback,  # Android 必需
                     )
-                    if path:
-                        self.gray_image.save(path)
-                        self.status_label.text = f"已保存: {path}"
+
                 except Exception as e:
-                    self.status_label.text = f"保存错误: {str(e)}"
+                    # 如果 save_file() 失败（plyer bug #816），使用备选方案
+                    try:
+                        # 备选方案：直接保存到相册目录
+                        from plyer import storagepath
+
+                        pictures_dir = storagepath.get_pictures_dir()
+                        if not pictures_dir:
+                            # 尝试使用外部存储
+                            external_dir = storagepath.get_external_storage_dir()
+                            if external_dir:
+                                pictures_dir = os.path.join(external_dir, "Pictures")
+
+                        if pictures_dir and os.path.exists(pictures_dir):
+                            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                            filename = f"gray_{timestamp}.png"
+                            save_path = os.path.join(pictures_dir, filename)
+
+                            self.gray_image.save(save_path)
+                            self.status_label.text = f"已保存到相册: {filename}"
+                        else:
+                            self.status_label.text = "无法访问相册目录"
+
+                    except Exception as e2:
+                        self.status_label.text = f"保存失败: {str(e2)}"
+                        import traceback
+
+                        traceback.print_exc()
             else:
                 # 桌面平台原逻辑
                 if self.original_path:
