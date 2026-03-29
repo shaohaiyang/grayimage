@@ -49,16 +49,20 @@ jobs:
       run: |
         export ANDROID_HOME=/usr/local/lib/android/sdk
         export JAVA_HOME=/usr/lib/jvm/temurin-17-jdk-amd64
-        buildozer android debug 2>&1 | tail -100
+        buildozer android debug 2>&1 | tee build.log
+        echo "=== Build Log ==="
+        cat build.log
+        ls -la bin/ 2>/dev/null || echo "No bin directory"
+        find . -name "*.apk" 2>/dev/null
 
     - name: Find APK
       run: find . -name "*.apk" -type f
 
-    - name: Upload APK
+    - name: Upload artifacts
       uses: actions/upload-artifact@v4
-      if: success()
       with:
-        name: grayimage.apk
+        name: build-artifacts
         path: |
           bin/*.apk
           .buildozer/**/*.apk
+          build.log
