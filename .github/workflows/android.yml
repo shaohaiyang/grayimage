@@ -20,6 +20,8 @@ jobs:
 
     - name: Install dependencies
       run: |
+        pip install --upgrade pip
+        pip install setuptools
         pip install buildozer cython pillow plyer
 
     - name: Install Java
