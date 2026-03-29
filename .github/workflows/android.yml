@@ -32,8 +32,11 @@ jobs:
 
     - name: Set up Android SDK
       uses: android-actions/setup-android@v2
-      with:
-        accept-licenses: true
+
+    - name: Accept Android licenses
+      run: |
+        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+        yes | $ANDROID_HOME/platform-tools/adb kill-server || true
 
     - name: Build APK
       run: |
