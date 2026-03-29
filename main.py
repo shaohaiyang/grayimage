@@ -28,7 +28,7 @@ if SYSTEM == "Darwin":
 elif SYSTEM == "Windows":
     CHINESE_FONT = "simsun.ttc"
 elif is_android():
-    CHINESE_FONT = None
+    CHINESE_FONT = "DroidSansFallback"  # Android 支持中文的字体
 else:
     CHINESE_FONT = "DroidSansFallback"
 
@@ -385,9 +385,9 @@ class GrayImageApp(App):
             if is_android():
                 from plyer import storagepath
 
-                cache_dir = storagepath.get_cache_dir()
+                cache_dir = storagepath.get_application_dir()
                 if not cache_dir:
-                    cache_dir = "/data/data/org.example.grayimage/cache"
+                    cache_dir = "/data/data/org.example.grayimage/files"
                 save_path = os.path.join(cache_dir, "original.png")
             else:
                 save_path = "/tmp/original.png"
@@ -413,9 +413,9 @@ class GrayImageApp(App):
             if is_android():
                 from plyer import storagepath
 
-                cache_dir = storagepath.get_cache_dir()
+                cache_dir = storagepath.get_application_dir()
                 if not cache_dir:
-                    cache_dir = "/data/data/org.example.grayimage/cache"
+                    cache_dir = "/data/data/org.example.grayimage/files"
                 save_path = os.path.join(cache_dir, "gray.png")
             else:
                 save_path = "/tmp/gray.png"
