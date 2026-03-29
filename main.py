@@ -12,13 +12,11 @@ class GrayImageApp(App):
     def build(self):
         layout = BoxLayout(orientation="vertical", padding=20, spacing=15)
 
-        # 标题
         title = Label(
             text="Image Gray", font_size="28sp", bold=True, color=(0.2, 0.2, 0.2, 1)
         )
         layout.add_widget(title)
 
-        # 按钮区域
         btn_layout = BoxLayout(
             orientation="horizontal", spacing=15, size_hint_y=None, height=50
         )
@@ -40,16 +38,13 @@ class GrayImageApp(App):
 
         layout.add_widget(btn_layout)
 
-        # 状态标签
         self.status_label = Label(
             text="Select an image", font_size="14sp", color=(0.5, 0.5, 0.5, 1)
         )
         layout.add_widget(self.status_label)
 
-        # 图片显示区域
         img_layout = BoxLayout(orientation="horizontal", spacing=20)
 
-        # 原图
         left_box = BoxLayout(orientation="vertical")
         left_box.add_widget(
             Label(
@@ -60,7 +55,6 @@ class GrayImageApp(App):
         left_box.add_widget(self.original_img)
         img_layout.add_widget(left_box)
 
-        # 灰度图
         right_box = BoxLayout(orientation="vertical")
         right_box.add_widget(
             Label(text="Gray", font_size="16sp", bold=True, color=(0.2, 0.2, 0.2, 1))
@@ -78,15 +72,26 @@ class GrayImageApp(App):
         return layout
 
     def select_image(self, instance):
+        # 尝试使用 tkinter 对话框
         try:
-            from plyer import filechooser
+            import tkinter as tk
+            from tkinter import filedialog
 
-            path = filechooser.open_file(
+            root = tk.Tk()
+            root.withdraw()
+            root.attributes("-topmost", True)
+
+            file_path = filedialog.askopenfilename(
                 title="Select Image",
-                filters=[("Images", "*.png;*.jpg;*.jpeg;*.webp;*.bmp")],
+                filetypes=[
+                    ("Images", "*.png;*.jpg;*.jpeg;*.webp;*.bmp;*.gif"),
+                    ("All Files", "*.*"),
+                ],
             )
-            if path:
-                self.load_image(path[0])
+            root.destroy()
+
+            if file_path:
+                self.load_image(file_path)
         except Exception as e:
             self.status_label.text = f"Error: {str(e)}"
 
@@ -115,7 +120,7 @@ class GrayImageApp(App):
 
             self.process_image()
             self.save_btn.disabled = False
-            self.status_label.text = "Done"
+            self.status_label.text = "Done - click Save Gray"
 
         except Exception as e:
             self.status_label.text = f"Error: {str(e)}"
@@ -131,16 +136,32 @@ class GrayImageApp(App):
     def save_image(self, instance):
         if self.gray_image:
             try:
-                from plyer import filechooser
+                import tkinter as tk
+                from tkinter import filedialog
 
-                path = filechooser.save_file(
-                    title="Save Gray Image",
-                    filters=[("PNG", "*.png")],
-                    default_name="gray.png",
+                root = tk.Tk()
+                root.withdraw()
+                root.attributes("-topmost", True)
+
+                default_name = (
+                    os.path.splitext(os.path.basename(self.original_path))[0]
+                    + "_gray.png"
                 )
-                if path:
-                    self.gray_image.save(path)
-                    self.status_label.text = f"Saved: {path}"
+                file_path = filedialog.asksaveasfilename(
+                    title="Save Gray Image",
+                    defaultextension=".png",
+                    filetypes=[
+                        ("PNG", "*.png"),
+                        ("JPEG", "*.jpg"),
+                        ("All Files", "*.*"),
+                    ],
+                    initialfile=default_name,
+                )
+                root.destroy()
+
+                if file_path:
+                    self.gray_image.save(file_path)
+                    self.status_label.text = f"Saved: {os.path.basename(file_path)}"
             except Exception as e:
                 self.status_label.text = f"Error: {str(e)}"
 
