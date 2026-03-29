@@ -49,11 +49,16 @@ jobs:
       run: |
         export ANDROID_HOME=/usr/local/lib/android/sdk
         export JAVA_HOME=/usr/lib/jvm/temurin-17-jdk-amd64
-        buildozer android debug --verbose 2>&1 | tail -100
+        buildozer android debug 2>&1 | tail -100
+
+    - name: Find APK
+      run: find . -name "*.apk" -type f
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
       if: success()
       with:
         name: grayimage.apk
-        path: bin/*.apk
+        path: |
+          bin/*.apk
+          .buildozer/**/*.apk
