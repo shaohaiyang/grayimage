@@ -1,0 +1,142 @@
+from kivy.app import App
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.button import Button
+from kivy.uix.image import Image as KivyImage
+from kivy.uix.label import Label
+from kivy.uix.filechooser import FileChooserIconView
+from kivy.graphics import Color, Rectangle
+from PIL import Image
+import os
+
+
+class GrayImageApp(App):
+    def build(self):
+        layout = BoxLayout(orientation="vertical", padding=20, spacing=15)
+
+        # 标题
+        title = Label(
+            text="图片灰度化", font_size="28sp", bold=True, color=(0.2, 0.2, 0.2, 1)
+        )
+        layout.add_widget(title)
+
+        # 按钮区域
+        btn_layout = BoxLayout(
+            orientation="horizontal", spacing=15, size_hint_y=None, height=50
+        )
+
+        self.select_btn = Button(
+            text="选择图片", background_color=(0.9, 0.9, 0.9, 1), color=(0, 0, 0, 1)
+        )
+        self.select_btn.bind(on_press=self.select_image)
+        btn_layout.add_widget(self.select_btn)
+
+        self.save_btn = Button(
+            text="保存灰度图",
+            background_color=(0.9, 0.9, 0.9, 1),
+            color=(0, 0, 0, 1),
+            disabled=True,
+        )
+        self.save_btn.bind(on_press=self.save_image)
+        btn_layout.add_widget(self.save_btn)
+
+        layout.add_widget(btn_layout)
+
+        # 状态标签
+        self.status_label = Label(
+            text="请选择图片", font_size="14sp", color=(0.5, 0.5, 0.5, 1)
+        )
+        layout.add_widget(self.status_label)
+
+        # 图片显示区域
+        img_layout = BoxLayout(orientation="horizontal", spacing=20)
+
+        # 原图
+        left_box = BoxLayout(orientation="vertical")
+        left_box.add_widget(
+            Label(text="原图", font_size="16sp", bold=True, color=(0.2, 0.2, 0.2, 1))
+        )
+        self.original_img = KivyImage()
+        left_box.add_widget(self.original_img)
+        img_layout.add_widget(left_box)
+
+        # 灰度图
+        right_box = BoxLayout(orientation="vertical")
+        right_box.add_widget(
+            Label(text="灰度图", font_size="16sp", bold=True, color=(0.2, 0.2, 0.2, 1))
+        )
+        self.gray_img = KivyImage()
+        right_box.add_widget(self.gray_img)
+        img_layout.add_widget(right_box)
+
+        layout.add_widget(img_layout)
+
+        self.original_image = None
+        self.gray_image = None
+        self.original_path = None
+
+        return layout
+
+    def select_image(self, instance):
+        # 使用文件选择器
+        from plyer import filechooser
+
+        path = filechooser.open_file(
+            title="选择图片", filters=[("图片文件", "*.png;*.jpg;*.jpeg;*.webp;*.bmp")]
+        )
+        if path:
+            self.load_image(path[0])
+
+    def load_image(self, path):
+        try:
+            self.status_label.text = f"加载: {os.path.basename(path)}"
+            self.original_path = path
+
+            img = Image.open(path)
+
+            if img.mode in ("RGBA", "P", "LA"):
+                background = Image.new("RGB", img.size, (255, 255, 255))
+                if img.mode == "P":
+                    img = img.convert("RGBA")
+                background.paste(
+                    img, mask=img.split()[-1] if img.mode in ("RGBA", "LA") else None
+                )
+                self.original_image = background
+            else:
+                self.original_image = img.convert("RGB")
+
+            # 显示原图
+            self.original_image.save("/tmp/original.png")
+            self.original_img.source = "/tmp/original.png"
+            self.original_img.reload()
+
+            self.process_image()
+            self.save_btn.disabled = False
+            self.status_label.text = "处理完成"
+
+        except Exception as e:
+            self.status_label.text = f"错误: {str(e)}"
+
+    def process_image(self):
+        if self.original_image:
+            self.gray_image = self.original_image.convert("L")
+            self.gray_image.save("/tmp/gray.png")
+            self.gray_img.source = "/tmp/gray.png"
+            self.gray_img.reload()
+
+    def save_image(self, instance):
+        if self.gray_image:
+            from plyer import filechooser
+
+            path = filechooser.save_file(
+                title="保存灰度图", filters=[("PNG", "*.png")], default_name="gray.png"
+            )
+            if path:
+                try:
+                    self.gray_image.save(path)
+                    self.status_label.text = f"已保存: {path}"
+                except Exception as e:
+                    self.status_label.text = f"保存失败: {str(e)}"
+
+
+if __name__ == "__main__":
+    GrayImageApp().run()
