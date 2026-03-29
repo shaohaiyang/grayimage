@@ -32,6 +32,8 @@ jobs:
 
     - name: Set up Android SDK
       uses: android-actions/setup-android@v2
+      with:
+        accept-licenses: true
 
     - name: Build APK
       run: |
