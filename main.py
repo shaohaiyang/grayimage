@@ -681,7 +681,8 @@ class GrayImageApp(MDApp):
                 # 定义回调函数处理选择的文件（Android 是异步的）
                 def on_file_selected(selection):
                     if selection and len(selection) > 0:
-                        self.load_image(selection[0])
+                        from kivy.clock import Clock
+                        Clock.schedule_once(lambda dt: self.load_image(selection[0]), 0)
 
                 # 使用 MIME 类型过滤，不是通配符
                 filechooser.open_file(
@@ -881,14 +882,19 @@ class GrayImageApp(MDApp):
 
                 def save_callback(file_output_stream):
                     """Android 保存回调函数"""
-                    try:
-                        buffer = BytesIO()
-                        image_to_save.save(buffer, format="PNG")
-                        file_output_stream.write(buffer.getvalue())
-                        file_output_stream.close()
-                        self.status_label.text = "✓ 保存成功!"
-                    except Exception as e:
-                        self.status_label.text = f"❌ 保存错误: {str(e)}"
+                    from kivy.clock import Clock
+                    
+                    def do_save(dt):
+                        try:
+                            buffer = BytesIO()
+                            image_to_save.save(buffer, format="PNG")
+                            file_output_stream.write(buffer.getvalue())
+                            file_output_stream.close()
+                            self.status_label.text = "✓ 保存成功!"
+                        except Exception as e:
+                            self.status_label.text = f"❌ 保存错误: {str(e)}"
+                    
+                    Clock.schedule_once(do_save, 0)
 
                 filechooser.save_file(
                     title=f"保存{image_type}",
