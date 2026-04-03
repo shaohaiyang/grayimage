@@ -478,13 +478,22 @@ class GrayImageApp(MDApp):
         self.tabs = MDTabs()
         self.tabs.default_tab = 0
 
+        # 注册选项卡中文字体
+        tab_font = self.chinese_font_name
+
         # 原图选项卡
         self.original_tab = Tab(title="原图")
+        # 设置选项卡标签字体
+        self.original_tab.tab_label.font_name = tab_font
+        self.original_tab.tab_label.font_size = "16sp"
         self.original_img = KivyImage()
         self.original_tab.add_widget(self.original_img)
 
         # 灰度图选项卡
         self.gray_tab = Tab(title="灰度")
+        # 设置选项卡标签字体
+        self.gray_tab.tab_label.font_name = tab_font
+        self.gray_tab.tab_label.font_size = "16sp"
         self.gray_img = KivyImage()
         self.gray_tab.add_widget(self.gray_img)
 
