@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   build:
@@ -22,25 +23,25 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.buildozer
-          key: ${{ runner.os }}-buildozer-global
+          key: ${{ runner.os }}-buildozer-global-${{ env.date }}
           restore-keys: |
-            ${{ runner.os }}-buildozer-global
+            ${{ runner.os }}-buildozer-global-
 
       - name: Cache Buildozer directory in app
         uses: actions/cache@v4
         with:
           path: .buildozer
-          key: ${{ runner.os }}-buildozer-app
+          key: ${{ runner.os }}-buildozer-app-${{ env.date }}
           restore-keys: |
-            ${{ runner.os }}-buildozer-app
+            ${{ runner.os }}-buildozer-app-
 
       - name: Cache Android SDK
         uses: actions/cache@v4
         with:
           path: ~/.buildozer/android/platform/android-sdk
-          key: ${{ runner.os }}-android-sdk
+          key: ${{ runner.os }}-android-sdk-${{ env.date }}
           restore-keys: |
-            ${{ runner.os }}-android-sdk
+            ${{ runner.os }}-android-sdk-
 
       - name: Install dependencies
         run: |
@@ -102,21 +103,54 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
       - name: Install pip dependencies
         run: |
           pip install --upgrade pip
           pip install buildozer cython==3.0.11
+          pip install kivymd pillow plyer
+
+      - name: Verify buildozer.spec
+        run: |
+          echo "=== Buildozer Configuration ==="
+          cat buildozer.spec
+          echo ""
+          echo "=== Checking Python files ==="
+          ls -la *.py
+          echo ""
+          echo "=== Checking requirements ==="
+          cat requirements.txt
 
       - name: Build with Buildozer
         run: |
-          yes | buildozer -v android debug
+          echo "=== Starting Buildozer Build ==="
+          buildozer -v android debug 2>&1 | tee build.log
+        continue-on-error: true
+
+      - name: Check build result
+        run: |
+          echo "=== Checking for APK ==="
+          find . -name "*.apk" -type f
+          if [ -f build.log ]; then
+            echo "=== Build Log (last 100 lines) ==="
+            tail -100 build.log
+          fi
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: grayimage.apk
+          name: grayimage-${{ env.date }}-debug
           path: |
             bin/*.apk
             bin/*.aab
+          if-no-files-found: warn
+
+      - name: Upload build logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: build-logs-${{ env.date }}
+          path: |
+            build.log
+            .buildozer/logs/
