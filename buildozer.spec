@@ -46,7 +46,7 @@ requirements = python3,kivy,kivymd,pillow,plyer,pyjnius,android
 # (str) Presplash of the application
 #presplash.filename = %(source.dir)s/data/presplash.png
 
-android.font_droid_sans = yes
+
 
 # (str) Icon of the application
 #icon.filename = %(source.dir)s/data/icon.png

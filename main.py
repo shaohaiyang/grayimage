@@ -40,29 +40,6 @@ from kivy.animation import Animation
 SYSTEM = platform.system()
 
 
-# 中文字体配置
-def get_chinese_font():
-    """获取适合当前平台的中文字体"""
-    if SYSTEM == "Darwin":
-        # macOS 优先使用系统字体
-        fonts = [
-            "/System/Library/Fonts/PingFang.ttc",
-            "/System/Library/Fonts/STHeiti Medium.ttc",
-            "/System/Library/Fonts/Hiragino Sans GB.ttc",
-            "/System/Library/Fonts/STHeiti Light.ttc"
-        ]
-        for font in fonts:
-            if os.path.exists(font):
-                return font
-    elif SYSTEM == "Windows":
-        return "simsun.ttc"
-    elif is_android():
-        return "DroidSansFallback"
-    return "DroidSansFallback"
-
-# 立即获取字体路径
-CHINESE_FONT = get_chinese_font()
-
 def is_android():
     """检测是否运行在 Android 平台"""
     return kivy_platform == "android"
@@ -101,38 +78,50 @@ IMAGE_EXTS = {
 }
 
 
-def get_font_name():
-    """获取注册的中文字体名称 - 优先使用已注册的中文字体"""
-    from kivy.core.text import LabelBase
-
-    # 如果中文字体已注册，直接使用
-    if 'ChineseFont' in LabelBase._fonts:
-        return 'ChineseFont'
-
-    # 如果没有注册，尝试注册
-    if CHINESE_FONT and os.path.exists(CHINESE_FONT):
-        try:
-            LabelBase.register(name='ChineseFont', fn_regular=CHINESE_FONT)
-            print(f"✓ 中文字体已注册: {CHINESE_FONT}")
-            return 'ChineseFont'
-        except Exception as e:
-            print(f"✗ 字体注册失败: {e}")
-
-    # 都失败则返回默认字体
-    return 'Roboto'
-
+def get_chinese_font():
+    """获取适合当前平台的中文字体"""
+    if SYSTEM == "Darwin":
+        fonts = [
+            "/System/Library/Fonts/PingFang.ttc",
+            "/System/Library/Fonts/STHeiti Medium.ttc",
+            "/System/Library/Fonts/Hiragino Sans GB.ttc",
+        ]
+        for font in fonts:
+            if os.path.exists(font):
+                return font
+    elif SYSTEM == "Windows":
+        return "simsun.ttc"
+    return "DroidSansFallback"
 
 def register_chinese_font():
-    """注册中文字体到Kivy"""
+    """注册中文字体到Kivy - 简化版本"""
     from kivy.core.text import LabelBase
-    if CHINESE_FONT and os.path.exists(CHINESE_FONT):
+    
+    if is_android():
         try:
-            LabelBase.register(name='ChineseFont', fn_regular=CHINESE_FONT)
-            print(f"✓ 中文字体已注册: {CHINESE_FONT}")
-            return 'ChineseFont'
-        except Exception as e:
-            print(f"✗ 字体注册失败: {e}")
+            LabelBase.register(
+                name='Chinese',
+                fn_regular='/system/fonts/DroidSansFallback.ttf'
+            )
+            return 'Chinese'
+        except:
             return 'Roboto'
+    else:
+        font_path = get_chinese_font()
+        if font_path and os.path.exists(font_path):
+            try:
+                LabelBase.register(name='Chinese', fn_regular=font_path)
+                return 'Chinese'
+            except:
+                return 'Roboto'
+        return 'Roboto'
+
+def get_font_name():
+    """获取已注册的中文字体名称"""
+    from kivy.core.text import LabelBase
+    
+    if 'Chinese' in LabelBase._fonts:
+        return 'Chinese'
     return 'Roboto'
 
 
@@ -151,7 +140,6 @@ class FileBrowserPopup(Popup):
             try:
                 from plyer import storagepath
 
-                # 优先级：Downloads > Pictures > 应用缓存 > 外部存储
                 downloads_dir = storagepath.get_downloads_dir()
                 if downloads_dir and os.path.exists(downloads_dir):
                     self.current_path = downloads_dir
@@ -160,24 +148,19 @@ class FileBrowserPopup(Popup):
                     if pictures_dir and os.path.exists(pictures_dir):
                         self.current_path = pictures_dir
                     else:
-                        # 备选：使用应用缓存目录
                         try:
                             from jnius import autoclass
-                            from android import mActivity
-
-                            Context = autoclass("android.content.Context")
-                            context = mActivity.getApplicationContext()
+                            PythonActivity = autoclass('org.kivy.android.PythonActivity')
+                            activity = PythonActivity.mActivity
+                            context = activity.getApplicationContext()
                             cache_dir = context.getCacheDir().getAbsolutePath()
                             self.current_path = cache_dir
-                        except:
-                            # 最后备选：使用外部存储根目录
+                        except Exception:
                             external_dir = storagepath.get_external_storage_dir()
                             self.current_path = external_dir if external_dir else "/sdcard"
-            except:
-                # 如果 plyer 不可用，使用默认 Android 路径
+            except Exception:
                 self.current_path = "/sdcard"
         else:
-            # macOS/Linux 使用 Pictures 目录
             self.current_path = os.path.expanduser("~/Pictures")
 
         self.build()
@@ -520,7 +503,6 @@ class GrayImageApp(MDApp):
     def animate_selection(self, instance):
         """选择按钮点击动画效果"""
         self.status_label.text = "正在准备..."
-        self.status_label.theme_text_color = "Secondary"
 
         # 模拟加载延迟
         from kivy.clock import Clock
@@ -558,7 +540,6 @@ class GrayImageApp(MDApp):
         '''加载并处理图片'''
         try:
             self.status_label.text = "正在加载图片..."
-            self.status_label.theme_text_color = "Primary"
             self.original_path = path
 
             img = Image.open(path)
@@ -584,34 +565,29 @@ class GrayImageApp(MDApp):
 
             # 使用正确的临时文件路径
             if is_android():
-                # 使用 Android Context.getCacheDir() 获取缓存目录
                 try:
                     from jnius import autoclass
-                    from android import mActivity
-
-                    Context = autoclass("android.content.Context")
-                    context = mActivity.getApplicationContext()
+                    PythonActivity = autoclass('org.kivy.android.PythonActivity')
+                    activity = PythonActivity.mActivity
+                    context = activity.getApplicationContext()
                     cache_dir = context.getCacheDir().getAbsolutePath()
                 except Exception:
-                    # 备选方案：使用 plyer.storagepath
-                    from plyer import storagepath
-
-                    app_dir = storagepath.get_application_dir()
-                    if app_dir:
-                        cache_dir = os.path.join(app_dir, "cache")
-                    else:
-                        # 最后备选：使用外部存储
-                        external_dir = storagepath.get_external_storage_dir()
-                        if external_dir:
-                            cache_dir = os.path.join(
-                                external_dir, "Android/data/org.example.grayimage/cache"
-                            )
+                    try:
+                        from plyer import storagepath
+                        app_dir = storagepath.get_application_dir()
+                        if app_dir:
+                            cache_dir = os.path.join(app_dir, "cache")
                         else:
-                            cache_dir = (
-                                "/sdcard/Android/data/org.example.grayimage/cache"
-                            )
+                            external_dir = storagepath.get_external_storage_dir()
+                            if external_dir:
+                                cache_dir = os.path.join(
+                                    external_dir, "Android/data/org.example.grayimage/cache"
+                                )
+                            else:
+                                cache_dir = "/sdcard/Android/data/org.example.grayimage/cache"
+                    except Exception:
+                        cache_dir = "/sdcard/Android/data/org.example.grayimage/cache"
 
-                # 确保目录存在
                 os.makedirs(cache_dir, exist_ok=True)
                 save_path = os.path.join(cache_dir, "original.png")
             else:
@@ -629,46 +605,39 @@ class GrayImageApp(MDApp):
 
         except Exception as e:
             self.status_label.text = f"错误: {str(e)}"
-            self.status_label.theme_text_color = "Error"
 
     def process_image(self, *args):
         '''处理图片为灰度图'''
         if self.original_image:
             self.status_label.text = "正在转换为灰度图..."
-            self.status_label.theme_text_color = "Primary"
 
             self.gray_image = self.original_image.convert("L")
 
             # 使用正确的临时文件路径
             if is_android():
-                # 使用 Android Context.getCacheDir() 获取缓存目录
                 try:
                     from jnius import autoclass
-                    from android import mActivity
-
-                    Context = autoclass("android.content.Context")
-                    context = mActivity.getApplicationContext()
+                    PythonActivity = autoclass('org.kivy.android.PythonActivity')
+                    activity = PythonActivity.mActivity
+                    context = activity.getApplicationContext()
                     cache_dir = context.getCacheDir().getAbsolutePath()
                 except Exception:
-                    # 备选方案：使用 plyer.storagepath
-                    from plyer import storagepath
-
-                    app_dir = storagepath.get_application_dir()
-                    if app_dir:
-                        cache_dir = os.path.join(app_dir, "cache")
-                    else:
-                        # 最后备选：使用外部存储
-                        external_dir = storagepath.get_external_storage_dir()
-                        if external_dir:
-                            cache_dir = os.path.join(
-                                external_dir, "Android/data/org.example.grayimage/cache"
-                            )
+                    try:
+                        from plyer import storagepath
+                        app_dir = storagepath.get_application_dir()
+                        if app_dir:
+                            cache_dir = os.path.join(app_dir, "cache")
                         else:
-                            cache_dir = (
-                                "/sdcard/Android/data/org.example.grayimage/cache"
-                            )
+                            external_dir = storagepath.get_external_storage_dir()
+                            if external_dir:
+                                cache_dir = os.path.join(
+                                    external_dir, "Android/data/org.example.grayimage/cache"
+                                )
+                            else:
+                                cache_dir = "/sdcard/Android/data/org.example.grayimage/cache"
+                    except Exception:
+                        cache_dir = "/sdcard/Android/data/org.example.grayimage/cache"
 
-                # 确保目录存在
                 os.makedirs(cache_dir, exist_ok=True)
                 save_path = os.path.join(cache_dir, "gray.png")
             else:
@@ -682,7 +651,6 @@ class GrayImageApp(MDApp):
             # 完成处理
             basename = os.path.basename(self.original_path)
             self.status_label.text = f"✓ 已转换完成: {basename}"
-            self.status_label.theme_text_color = "Primary"
             self.save_btn.disabled = False
             self.save_btn.md_bg_color = (0.2, 0.8, 0.9, 1.0)
 
@@ -690,13 +658,11 @@ class GrayImageApp(MDApp):
         '''保存灰度图片'''
         if self.gray_image:
             if is_android():
-                # Android 上保存（选项 1：让用户选择保存位置）
                 try:
                     from plyer import filechooser
                     from plyer import storagepath
                     from io import BytesIO
 
-                    # 生成默认文件名
                     if self.original_path:
                         base_name = os.path.splitext(
                             os.path.basename(self.original_path)
@@ -706,38 +672,30 @@ class GrayImageApp(MDApp):
                         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                         default_name = f"gray_{timestamp}.png"
 
-                    # 定义保存回调函数
                     def save_callback(file_output_stream):
                         """Android 保存回调函数"""
                         try:
-                            # 将 PIL 图片保存到字节流
                             buffer = BytesIO()
                             self.gray_image.save(buffer, format="PNG")
                             file_output_stream.write(buffer.getvalue())
                             file_output_stream.close()
                             self.status_label.text = "✓ 保存成功!"
-                            self.status_label.theme_text_color = "Primary"
                         except Exception as e:
                             self.status_label.text = f"❌ 保存错误: {str(e)}"
-                            self.status_label.theme_text_color = "Error"
 
-                    # 尝试使用 filechooser.save_file()
                     filechooser.save_file(
                         title="保存灰度图",
-                        filters=["image"],  # MIME type
+                        filters=["image"],
                         default_name=default_name,
-                        callback=save_callback,  # Android 必需
+                        callback=save_callback,
                     )
 
                 except Exception as e:
-                    # 如果 save_file() 失败（plyer bug #816），使用备选方案
                     try:
-                        # 备选方案：直接保存到相册目录
                         from plyer import storagepath
 
                         pictures_dir = storagepath.get_pictures_dir()
                         if not pictures_dir:
-                            # 尝试使用外部存储
                             external_dir = storagepath.get_external_storage_dir()
                             if external_dir:
                                 pictures_dir = os.path.join(external_dir, "Pictures")
@@ -749,18 +707,12 @@ class GrayImageApp(MDApp):
 
                             self.gray_image.save(save_path)
                             self.status_label.text = f"✓ 已保存到相册: {filename}"
-                            self.status_label.theme_text_color = "Primary"
                         else:
                             self.status_label.text = "❌ 无法访问相册目录"
-                            self.status_label.theme_text_color = "Error"
 
                     except Exception as e2:
                         self.status_label.text = f"❌ 保存失败: {str(e2)}"
-                        self.status_label.theme_text_color = "Error"
-                        import traceback
-                        traceback.print_exc()
             else:
-                # 桌面平台保存逻辑
                 if self.original_path:
                     default_name = (
                         os.path.splitext(os.path.basename(self.original_path))[0]
@@ -775,10 +727,8 @@ class GrayImageApp(MDApp):
                 try:
                     self.gray_image.save(save_path)
                     self.status_label.text = f"✓ 已保存: {os.path.basename(save_path)}"
-                    self.status_label.theme_text_color = "Primary"
                 except Exception as e:
                     self.status_label.text = f"❌ 错误: {str(e)}"
-                    self.status_label.theme_text_color = "Error"
 
 
 if __name__ == "__main__":
