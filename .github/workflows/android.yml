@@ -108,6 +108,7 @@ jobs:
       - name: Install pip dependencies
         run: |
           pip install --upgrade pip
+          pip install setuptools
           pip install buildozer cython==3.0.11
           pip install kivymd pillow plyer
 
