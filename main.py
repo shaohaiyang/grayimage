@@ -458,14 +458,22 @@ class GrayImageApp(MDApp):
         self.original_tab = Tab(title="原图")
         self.original_tab.tab_label.font_size = "16sp"
         self.original_tab.tab_label.theme_text_color = "Primary"
-        self.original_img = KivyImage()
+        self.original_img = KivyImage(
+            source='assets/default_placeholder.png',
+            allow_stretch=True,
+            keep_ratio=True
+        )
         self.original_tab.add_widget(self.original_img)
 
         # 灰度图选项卡
         self.gray_tab = Tab(title="灰度图")
         self.gray_tab.tab_label.font_size = "16sp"
         self.gray_tab.tab_label.theme_text_color = "Primary"
-        self.gray_img = KivyImage()
+        self.gray_img = KivyImage(
+            source='assets/default_placeholder.png',
+            allow_stretch=True,
+            keep_ratio=True
+        )
         self.gray_tab.add_widget(self.gray_img)
 
         self.tabs.add_widget(self.original_tab)
@@ -542,6 +550,11 @@ class GrayImageApp(MDApp):
             self.status_label.text = "正在加载图片..."
             self.original_path = path
 
+            # 直接使用原图路径设置 Image 组件（参考 kivy_mobile_image）
+            self.original_img.source = path
+            self.original_img.reload()
+
+            # 用 PIL 打开图片用于后续处理
             img = Image.open(path)
 
             # 验证图片完整性
@@ -563,41 +576,6 @@ class GrayImageApp(MDApp):
             else:
                 self.original_image = img.convert("RGB")
 
-            # 使用正确的临时文件路径
-            if is_android():
-                try:
-                    from jnius import autoclass
-                    PythonActivity = autoclass('org.kivy.android.PythonActivity')
-                    activity = PythonActivity.mActivity
-                    context = activity.getApplicationContext()
-                    cache_dir = context.getCacheDir().getAbsolutePath()
-                except Exception:
-                    try:
-                        from plyer import storagepath
-                        app_dir = storagepath.get_application_dir()
-                        if app_dir:
-                            cache_dir = os.path.join(app_dir, "cache")
-                        else:
-                            external_dir = storagepath.get_external_storage_dir()
-                            if external_dir:
-                                cache_dir = os.path.join(
-                                    external_dir, "Android/data/org.example.grayimage/cache"
-                                )
-                            else:
-                                cache_dir = "/sdcard/Android/data/org.example.grayimage/cache"
-                    except Exception:
-                        cache_dir = "/sdcard/Android/data/org.example.grayimage/cache"
-
-                os.makedirs(cache_dir, exist_ok=True)
-                save_path = os.path.join(cache_dir, "original.png")
-            else:
-                cache_dir = tempfile.gettempdir()
-                save_path = os.path.join(cache_dir, "original.png")
-
-            self.original_image.save(save_path)
-            self.original_img.source = save_path
-            self.original_img.reload()
-
             # 模拟处理延迟显示进度
             self.status_label.text = "正在处理图片..."
             from kivy.clock import Clock
@@ -613,46 +591,16 @@ class GrayImageApp(MDApp):
 
             self.gray_image = self.original_image.convert("L")
 
-            # 使用正确的临时文件路径
-            if is_android():
-                try:
-                    from jnius import autoclass
-                    PythonActivity = autoclass('org.kivy.android.PythonActivity')
-                    activity = PythonActivity.mActivity
-                    context = activity.getApplicationContext()
-                    cache_dir = context.getCacheDir().getAbsolutePath()
-                except Exception:
-                    try:
-                        from plyer import storagepath
-                        app_dir = storagepath.get_application_dir()
-                        if app_dir:
-                            cache_dir = os.path.join(app_dir, "cache")
-                        else:
-                            external_dir = storagepath.get_external_storage_dir()
-                            if external_dir:
-                                cache_dir = os.path.join(
-                                    external_dir, "Android/data/org.example.grayimage/cache"
-                                )
-                            else:
-                                cache_dir = "/sdcard/Android/data/org.example.grayimage/cache"
-                    except Exception:
-                        cache_dir = "/sdcard/Android/data/org.example.grayimage/cache"
-
-                os.makedirs(cache_dir, exist_ok=True)
-                save_path = os.path.join(cache_dir, "gray.png")
-            else:
-                cache_dir = tempfile.gettempdir()
-                save_path = os.path.join(cache_dir, "gray.png")
-
-            self.gray_image.save(save_path)
-            self.gray_img.source = save_path
+            # 保存到临时文件并显示（参考 kivy_mobile_image）
+            temp_path = 'temp_gray.png'
+            self.gray_image.save(temp_path)
+            self.gray_img.source = temp_path
             self.gray_img.reload()
 
             # 完成处理
             basename = os.path.basename(self.original_path)
             self.status_label.text = f"✓ 已转换完成: {basename}"
             self.save_btn.disabled = False
-            self.save_btn.md_bg_color = (0.2, 0.8, 0.9, 1.0)
 
     def save_image(self, instance):
         '''保存灰度图片'''
