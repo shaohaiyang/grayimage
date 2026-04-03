@@ -482,8 +482,7 @@ class GrayImageApp(MDApp):
         self.original_tab = Tab(title="原图")
         self.original_tab.tab_label.font_name = tab_font
         self.original_tab.tab_label.font_size = "16sp"
-        self.original_tab.tab_label.theme_text_color = "Custom"
-        self.original_tab.tab_label.text_color = (0.2, 0.5, 0.7, 1.0)
+        self.original_tab.tab_label.theme_text_color = "Primary"
         self.original_img = KivyImage()
         self.original_tab.add_widget(self.original_img)
 
@@ -491,8 +490,7 @@ class GrayImageApp(MDApp):
         self.gray_tab = Tab(title="灰度图")
         self.gray_tab.tab_label.font_name = tab_font
         self.gray_tab.tab_label.font_size = "16sp"
-        self.gray_tab.tab_label.theme_text_color = "Custom"
-        self.gray_tab.tab_label.text_color = (0.2, 0.5, 0.7, 1.0)
+        self.gray_tab.tab_label.theme_text_color = "Primary"
         self.gray_img = KivyImage()
         self.gray_tab.add_widget(self.gray_img)
 
