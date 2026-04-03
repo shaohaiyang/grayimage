@@ -694,7 +694,7 @@ class GrayImageApp(MDApp):
             # 完成处理
             basename = os.path.basename(self.original_path)
             self.status_label.text = f"✓ 已转换完成: {basename}"
-            self.status_label.theme_text_color = "Success"
+            self.status_label.theme_text_color = "Primary"
             self.save_btn.disabled = False
             self.save_btn.md_bg_color = (0.2, 0.8, 0.9, 1.0)
 
@@ -728,7 +728,7 @@ class GrayImageApp(MDApp):
                             file_output_stream.write(buffer.getvalue())
                             file_output_stream.close()
                             self.status_label.text = "✓ 保存成功!"
-                            self.status_label.theme_text_color = "Success"
+                            self.status_label.theme_text_color = "Primary"
                         except Exception as e:
                             self.status_label.text = f"❌ 保存错误: {str(e)}"
                             self.status_label.theme_text_color = "Error"
@@ -761,7 +761,7 @@ class GrayImageApp(MDApp):
 
                             self.gray_image.save(save_path)
                             self.status_label.text = f"✓ 已保存到相册: {filename}"
-                            self.status_label.theme_text_color = "Success"
+                            self.status_label.theme_text_color = "Primary"
                         else:
                             self.status_label.text = "❌ 无法访问相册目录"
                             self.status_label.theme_text_color = "Error"
@@ -785,7 +785,7 @@ class GrayImageApp(MDApp):
                 try:
                     self.gray_image.save(final_path)
                     self.status_label.text = f"✓ 已保存到下载目录!"
-                    self.status_label.theme_text_color = "Success"
+                    self.status_label.theme_text_color = "Primary"
                 except Exception as e:
                     self.status_label.text = f"❌ 错误: {str(e)}"
                     self.status_label.theme_text_color = "Error"
