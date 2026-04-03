@@ -384,24 +384,21 @@ class GrayImageApp(MDApp):
             spacing=12
         )
 
-        title_icon = MDLabel(
+        title_icon = Label(
             text="📷",
             font_size="28sp",
             halign="center",
-            theme_text_color="Custom",
-            text_color=(1, 1, 1, 1),
             size_hint_x=None,
             width=55
         )
 
-        title_label = MDLabel(
+        title_label = Label(
             text=self.title,
             font_name=self.chinese_font_name,
             font_size="24sp",
             bold=False,
-            theme_text_color="Custom",
-            text_color=(1, 1, 1, 1),
-            halign="left"
+            halign="left",
+            color=(1, 1, 1, 1)
         )
 
         title_layout.add_widget(title_icon)
@@ -416,17 +413,14 @@ class GrayImageApp(MDApp):
             padding=[20, 10, 20, 10]
         )
 
-        self.select_btn = MDRaisedButton(
+        self.select_btn = Button(
             text="选择图片",
             font_name=self.chinese_font_name,
             font_size="18sp",
             size_hint_y=None,
             height=60,
-            elevation=6,
-            md_bg_color=(0.2, 0.8, 0.9, 1.0),
-            theme_text_color="Custom",
-            text_color=(1, 1, 1, 1),
-            ripple_color=(0.95, 0.95, 0.95, 0.3),
+            background_color=(0.2, 0.8, 0.9, 1.0),
+            color=(1, 1, 1, 1),
         )
         self.select_btn.bind(on_press=self.animate_selection)
         button_wrapper.add_widget(self.select_btn)
@@ -446,12 +440,12 @@ class GrayImageApp(MDApp):
             padding=15
         )
 
-        self.status_label = MDLabel(
+        self.status_label = Label(
             text="请选择一张图片开始转换",
             font_name=self.chinese_font_name,
             font_size="15sp",
             halign="center",
-            theme_text_color="Secondary",
+            color=(0.5, 0.5, 0.5, 1),
         )
 
         self.status_card.add_widget(self.status_label)
@@ -508,17 +502,14 @@ class GrayImageApp(MDApp):
             padding=[20, 10, 20, 15]
         )
 
-        self.save_btn = MDRaisedButton(
+        self.save_btn = Button(
             text="💾 保存图片",
             font_name=self.chinese_font_name,
             font_size="16sp",
             size_hint_y=None,
             height=55,
-            elevation=6,
-            md_bg_color=(0.2, 0.8, 0.9, 1.0),
-            theme_text_color="Custom",
-            text_color=(1, 1, 1, 1),
-            ripple_color=(0.95, 0.95, 0.95, 0.3),
+            background_color=(0.2, 0.8, 0.9, 1.0),
+            color=(1, 1, 1, 1),
             disabled=True
         )
         self.save_btn.bind(on_press=self.save_image)
