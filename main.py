@@ -37,6 +37,30 @@ from kivymd.icon_definitions import md_icons
 SYSTEM = platform.system()
 
 
+# 中文字体配置
+def get_chinese_font():
+    """获取适合当前平台的中文字体"""
+    if SYSTEM == "Darwin":
+        # macOS 优先使用系统字体
+        fonts = [
+            "/System/Library/Fonts/PingFang.ttc",
+            "/System/Library/Fonts/STHeiti Medium.ttc",
+            "/System/Library/Fonts/Hiragino Sans GB.ttc",
+            "/System/Library/Fonts/STHeiti Light.ttc"
+        ]
+        for font in fonts:
+            if os.path.exists(font):
+                return font
+    elif SYSTEM == "Windows":
+        return "simsun.ttc"
+    elif is_android():
+        return "DroidSansFallback"
+    return "DroidSansFallback"
+
+# 立即获取字体路径
+CHINESE_FONT = get_chinese_font()
+
+
 def is_android():
     """检测是否运行在 Android 平台"""
     return kivy_platform == "android"
@@ -69,16 +93,6 @@ def get_app_title():
         return "图片灰度化"
 
 
-# 中文字体配置
-if SYSTEM == "Darwin":
-    CHINESE_FONT = "/System/Library/Fonts/STHeiti Medium.ttc"
-elif SYSTEM == "Windows":
-    CHINESE_FONT = "simsun.ttc"
-elif is_android():
-    CHINESE_FONT = "DroidSansFallback"
-else:
-    CHINESE_FONT = "DroidSansFallback"
-
 IMAGE_EXTS = {
     ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp",
     ".PNG", ".JPG", ".JPEG", ".BMP", ".GIF", ".WEBP",
@@ -86,7 +100,23 @@ IMAGE_EXTS = {
 
 
 def get_font_name():
-    return CHINESE_FONT if CHINESE_FONT else "Roboto"
+    """获取注册的中文字体名称"""
+    from kivy.core.text import LabelBase
+    return 'ChineseFont' if 'ChineseFont' in LabelBase._fonts else 'Roboto'
+
+
+def register_chinese_font():
+    """注册中文字体到Kivy"""
+    from kivy.core.text import LabelBase
+    if CHINESE_FONT and os.path.exists(CHINESE_FONT):
+        try:
+            LabelBase.register(name='ChineseFont', fn_regular=CHINESE_FONT)
+            print(f"✓ 中文字体已注册: {CHINESE_FONT}")
+            return 'ChineseFont'
+        except Exception as e:
+            print(f"✗ 字体注册失败: {e}")
+            return 'Roboto'
+    return 'Roboto'
 
 
 class Tab(BoxLayout, MDTabsBase):
@@ -299,6 +329,9 @@ class GrayImageApp(MDApp):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        # 注册中文字体
+        self.chinese_font_name = register_chinese_font()
+
         self.theme_cls.primary_palette = "Blue"
         self.theme_cls.theme_style = "Light"
         self.title = get_app_title()
@@ -345,6 +378,7 @@ class GrayImageApp(MDApp):
         title_label = MDLabel(
             text=self.title,
             font_size="22sp",
+            font_name=self.chinese_font_name,
             bold=True,
             theme_text_color="Custom",
             text_color=(1, 1, 1, 1),
@@ -375,6 +409,7 @@ class GrayImageApp(MDApp):
         self.select_btn = MDRaisedButton(
             text="选择图片",
             font_size="18sp",
+            font_name=self.chinese_font_name,
             size_hint_y=None,
             height=50,
             pos_hint={"center_x": 0.5},
@@ -403,6 +438,7 @@ class GrayImageApp(MDApp):
         self.status_label = MDLabel(
             text="请选择一张图片",
             font_size="14sp",
+            font_name=self.chinese_font_name,
             halign="center",
             theme_text_color="Hint",
             padding=[10, 10]
@@ -464,6 +500,7 @@ class GrayImageApp(MDApp):
         self.save_btn = MDRaisedButton(
             text="💾 保存图片",
             font_size="16sp",
+            font_name=self.chinese_font_name,
             size_hint_y=None,
             height=50,
             md_bg_color=self.theme_cls.primary_color,
