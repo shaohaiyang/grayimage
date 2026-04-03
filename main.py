@@ -527,7 +527,7 @@ class GrayImageApp(MDApp):
         save_wrapper.add_widget(self.save_btn)
         main_layout.add_widget(save_wrapper)
 
-        self.root.root = main_layout
+        self.root.add_widget(main_layout)
 
         return self.root
 
