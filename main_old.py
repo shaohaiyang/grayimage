@@ -1,8 +1,3 @@
-"""
-图片灰度化应用 - Material Design 界面
-支持多平台，优化的移动端竖屏体验
-"""
-
 import sys
 import os
 import tempfile
@@ -14,51 +9,13 @@ from kivy.uix.label import Label
 from kivy.uix.popup import Popup
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.gridlayout import GridLayout
-from kivy.core.window import Window
 from PIL import Image
-from datetime import datetime
+from datetime import datetime  # 用于生成时间戳文件名
 
 import platform
 from kivy.utils import platform as kivy_platform
 
-# KivyMD imports
-from kivymd.app import MDApp
-from kivymd.uix.boxlayout import MDBoxLayout
-from kivymd.uix.button import MDRaisedButton, MDFloatingActionButton
-from kivymd.uix.label import MDLabel
-from kivymd.uix.card import MDCard
-from kivymd.uix.tab import MDTabs, MDTabsBase
-from kivymd.uix.floatlayout import MDFloatLayout
-from kivymd.theming import ThemableBehavior
-from kivy.properties import ObjectProperty
-from kivymd.uix.screen import MDScreen
-from kivymd.icon_definitions import md_icons
-
 SYSTEM = platform.system()
-
-
-# 中文字体配置
-def get_chinese_font():
-    """获取适合当前平台的中文字体"""
-    if SYSTEM == "Darwin":
-        # macOS 优先使用系统字体
-        fonts = [
-            "/System/Library/Fonts/PingFang.ttc",
-            "/System/Library/Fonts/STHeiti Medium.ttc",
-            "/System/Library/Fonts/Hiragino Sans GB.ttc",
-            "/System/Library/Fonts/STHeiti Light.ttc"
-        ]
-        for font in fonts:
-            if os.path.exists(font):
-                return font
-    elif SYSTEM == "Windows":
-        return "simsun.ttc"
-    elif is_android():
-        return "DroidSansFallback"
-    return "DroidSansFallback"
-
-# 立即获取字体路径
-CHINESE_FONT = get_chinese_font()
 
 
 def is_android():
@@ -82,7 +39,7 @@ def get_app_title():
     """获取平台特定的应用标题"""
     platform_name = get_platform()
     if platform_name == "android":
-        return "图片灰度化"
+        return "图片灰度化 (Android版)"
     elif platform_name == "macos":
         return "图片灰度化 (macOS版)"
     elif platform_name == "windows":
@@ -93,55 +50,44 @@ def get_app_title():
         return "图片灰度化"
 
 
+if SYSTEM == "Darwin":
+    CHINESE_FONT = "/System/Library/Fonts/STHeiti Medium.ttc"
+elif SYSTEM == "Windows":
+    CHINESE_FONT = "simsun.ttc"
+elif is_android():
+    CHINESE_FONT = "DroidSansFallback"  # Android 支持中文的字体
+else:
+    CHINESE_FONT = "DroidSansFallback"
+
 IMAGE_EXTS = {
-    ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp",
-    ".PNG", ".JPG", ".JPEG", ".BMP", ".GIF", ".WEBP",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".bmp",
+    ".gif",
+    ".webp",
+    ".PNG",
+    ".JPG",
+    ".JPEG",
+    ".BMP",
+    ".GIF",
+    ".WEBP",
 }
 
 
+def font_props(size=None, bold=False):
+    props = {}
+    if CHINESE_FONT:
+        props["font_name"] = CHINESE_FONT
+    if size:
+        props["font_size"] = size
+    if bold:
+        props["bold"] = bold
+    return props
+
+
 def get_font_name():
-    """获取注册的中文字体名称 - 优先使用已注册的中文字体"""
-    from kivy.core.text import LabelBase
-
-    # 如果中文字体已注册，直接使用
-    if 'ChineseFont' in LabelBase._fonts:
-        return 'ChineseFont'
-
-    # 如果没有注册，尝试注册
-    if CHINESE_FONT and os.path.exists(CHINESE_FONT):
-        try:
-            LabelBase.register(name='ChineseFont', fn_regular=CHINESE_FONT)
-            print(f"✓ 中文字体已注册: {CHINESE_FONT}")
-            return 'ChineseFont'
-        except Exception as e:
-            print(f"✗ 字体注册失败: {e}")
-
-    # 都失败则返回默认字体
-    return 'Roboto'
-
-
-def register_chinese_font():
-    """注册中文字体到Kivy"""
-    from kivy.core.text import LabelBase
-    if CHINESE_FONT and os.path.exists(CHINESE_FONT):
-        try:
-            LabelBase.register(name='ChineseFont', fn_regular=CHINESE_FONT)
-            print(f"✓ 中文字体已注册: {CHINESE_FONT}")
-            return 'ChineseFont'
-        except Exception as e:
-            print(f"✗ 字体注册失败: {e}")
-            return 'Roboto'
-    return 'Roboto'
-
-
-class Tab(BoxLayout, MDTabsBase):
-    '''选项卡内容类'''
-    pass
-
-
-class ImageCard(MDCard):
-    '''图片卡片组件'''
-    pass
+    return CHINESE_FONT if CHINESE_FONT else "Roboto"
 
 
 class FileBrowserPopup(Popup):
@@ -187,7 +133,7 @@ class FileBrowserPopup(Popup):
 
     def build(self):
         self.title = "选择图片"
-        self.title_font = get_font_name()
+        self.title_font = CHINESE_FONT
         self.title_size = "18sp"
         self.size_hint = (0.9, 0.9)
         self.auto_dismiss = False
@@ -339,202 +285,95 @@ class FileBrowserPopup(Popup):
         pass
 
 
-class GrayImageApp(MDApp):
-    '''图片灰度化应用主类'''
+class GrayImageApp(App):
+    def build(self):
+        layout = BoxLayout(orientation="vertical", padding=20, spacing=15)
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        # 注册中文字体
-        self.chinese_font_name = register_chinese_font()
+        title = Label(
+            text=get_app_title(),
+            font_name=get_font_name(),
+            font_size="28sp",
+            bold=True,
+            color=(0.2, 0.2, 0.2, 1),
+        )
+        layout.add_widget(title)
 
-        self.theme_cls.primary_palette = "Blue"
-        self.theme_cls.theme_style = "Light"
-        self.title = get_app_title()
+        self.select_btn = Button(
+            text="选择图片",
+            font_name=get_font_name(),
+            font_size="18sp",
+            size_hint_y=None,
+            height=60,
+            background_color=(0.6, 0.75, 0.9, 1),
+            color=(1, 1, 1, 1),
+        )
+        self.select_btn.bind(on_press=self.show_file_selector)
+        layout.add_widget(self.select_btn)
 
-        # 设置窗口大小（仅桌面端）
-        if not is_android():
-            Window.size = (360, 640)  # 模拟手机竖屏尺寸
+        self.status_label = Label(
+            text="请选择一张图片",
+            font_name=get_font_name(),
+            font_size="14sp",
+            color=(0.5, 0.5, 0.5, 1),
+        )
+        layout.add_widget(self.status_label)
+
+        img_layout = BoxLayout(orientation="horizontal", spacing=20, size_hint_y=1)
+
+        left_box = BoxLayout(orientation="vertical", padding=5)
+        left_box.add_widget(
+            Label(
+                text="原图",
+                font_name=get_font_name(),
+                font_size="16sp",
+                bold=True,
+                color=(0.2, 0.2, 0.2, 1),
+                size_hint_y=None,
+                height=30,
+            )
+        )
+        self.original_img = KivyImage()
+        left_box.add_widget(self.original_img)
+        img_layout.add_widget(left_box)
+
+        right_box = BoxLayout(orientation="vertical", padding=5)
+        right_box.add_widget(
+            Label(
+                text="灰度图",
+                font_name=get_font_name(),
+                font_size="16sp",
+                bold=True,
+                color=(0.2, 0.2, 0.2, 1),
+                size_hint_y=None,
+                height=30,
+            )
+        )
+        self.gray_img = KivyImage()
+        right_box.add_widget(self.gray_img)
+        img_layout.add_widget(right_box)
+
+        layout.add_widget(img_layout)
+
+        self.save_btn = Button(
+            text="保存到下载目录",
+            font_name=get_font_name(),
+            font_size="16sp",
+            size_hint_y=None,
+            height=50,
+            background_color=(0.7, 0.85, 0.7, 1),
+            color=(0, 0, 0, 1),
+            disabled=True,
+        )
+        self.save_btn.bind(on_press=self.save_image)
+        layout.add_widget(self.save_btn)
 
         self.original_image = None
         self.gray_image = None
         self.original_path = None
 
-    def build(self):
-        '''构建UI界面'''
-        self.root = MDScreen()
-
-        # 主布局
-        main_layout = MDBoxLayout(
-            orientation="vertical",
-            padding=0,
-            spacing=0
-        )
-
-        # 1. 顶部标题栏
-        title_card = MDCard(
-            size_hint_y=None,
-            height=60,
-            elevation=4,
-            padding=[10, 10, 10, 10],
-            md_bg_color=self.theme_cls.primary_color,
-            radius=[0, 0, 15, 15]
-        )
-        title_layout = MDBoxLayout(
-            orientation="horizontal",
-            spacing=10
-        )
-        title_icon = MDLabel(
-            text="📷",
-            font_size="30sp",
-            halign="center",
-            size_hint_x=None,
-            width=50
-        )
-        title_label = MDLabel(
-            text=self.title,
-            font_size="22sp",
-            font_name=self.chinese_font_name,
-            bold=True,
-            theme_text_color="Custom",
-            text_color=(1, 1, 1, 1),
-            halign="center"
-        )
-        title_layout.add_widget(title_icon)
-        title_layout.add_widget(title_label)
-        title_card.add_widget(title_layout)
-        main_layout.add_widget(title_card)
-
-        # 2. 主操作按钮区域
-        button_wrapper = MDBoxLayout(
-            size_hint_y=None,
-            height=90,
-            padding=[10, 10, 10, 5]
-        )
-        button_card = MDCard(
-            size_hint=(1, 1),
-            elevation=2,
-            radius=15
-        )
-        button_layout = MDBoxLayout(
-            orientation="vertical",
-            padding=10,
-            spacing=5
-        )
-
-        self.select_btn = MDRaisedButton(
-            text="选择图片",
-            font_size="18sp",
-            font_name=self.chinese_font_name,
-            size_hint_y=None,
-            height=50,
-            pos_hint={"center_x": 0.5},
-            md_bg_color=self.theme_cls.primary_color,
-            theme_text_color="Custom",
-            text_color=(1, 1, 1, 1)
-        )
-        self.select_btn.bind(on_press=self.show_file_selector)
-        button_layout.add_widget(self.select_btn)
-        button_card.add_widget(button_layout)
-        button_wrapper.add_widget(button_card)
-        main_layout.add_widget(button_wrapper)
-
-        # 3. 状态提示区域
-        status_wrapper = MDBoxLayout(
-            size_hint_y=None,
-            height=60,
-            padding=[10, 5, 10, 5]
-        )
-        self.status_card = MDCard(
-            size_hint=(1, 1),
-            elevation=2,
-            radius=15,
-            md_bg_color=(0.95, 0.95, 0.98, 1)
-        )
-        self.status_label = MDLabel(
-            text="请选择一张图片",
-            font_size="14sp",
-            font_name=self.chinese_font_name,
-            halign="center",
-            theme_text_color="Hint",
-            padding=[10, 10]
-        )
-        self.status_card.add_widget(self.status_label)
-        status_wrapper.add_widget(self.status_card)
-        main_layout.add_widget(status_wrapper)
-
-        # 4. 图片显示区域（选项卡）
-        image_wrapper = MDBoxLayout(
-            size_hint_y=1,
-            padding=[10, 5, 10, 5]
-        )
-        image_card = MDCard(
-            size_hint=(1, 1),
-            elevation=2,
-            radius=15,
-            padding=5
-        )
-
-        # 创建选项卡
-        self.tabs = MDTabs()
-        self.tabs.default_tab = 0
-
-        # 原图选项卡
-        self.original_tab = Tab(title="原图")
-        self.original_img = KivyImage()
-        self.original_tab.add_widget(self.original_img)
-
-        # 灰度图选项卡
-        self.gray_tab = Tab(title="灰度")
-        self.gray_img = KivyImage()
-        self.gray_tab.add_widget(self.gray_img)
-
-        self.tabs.add_widget(self.original_tab)
-        self.tabs.add_widget(self.gray_tab)
-
-        image_card.add_widget(self.tabs)
-        image_wrapper.add_widget(image_card)
-        main_layout.add_widget(image_wrapper)
-
-        # 5. 保存按钮区域
-        save_wrapper = MDBoxLayout(
-            size_hint_y=None,
-            height=80,
-            padding=[10, 5, 10, 10]
-        )
-        save_card = MDCard(
-            size_hint=(1, 1),
-            elevation=4,
-            radius=15
-        )
-        save_layout = MDBoxLayout(
-            orientation="vertical",
-            padding=10,
-            spacing=5
-        )
-
-        self.save_btn = MDRaisedButton(
-            text="💾 保存图片",
-            font_size="16sp",
-            font_name=self.chinese_font_name,
-            size_hint_y=None,
-            height=50,
-            md_bg_color=self.theme_cls.primary_color,
-            theme_text_color="Custom",
-            text_color=(1, 1, 1, 1),
-            disabled=True
-        )
-        self.save_btn.bind(on_press=self.save_image)
-        save_layout.add_widget(self.save_btn)
-        save_card.add_widget(save_layout)
-        save_wrapper.add_widget(save_card)
-        main_layout.add_widget(save_wrapper)
-
-        self.root.add_widget(main_layout)
-
-        return self.root
+        return layout
 
     def show_file_selector(self, instance):
-        '''显示文件选择器'''
         if is_android():
             # Android上使用plyer文件选择器
             try:
@@ -554,6 +393,7 @@ class GrayImageApp(MDApp):
             except Exception as e:
                 self.status_label.text = f"文件选择错误: {str(e)}"
                 import traceback
+
                 traceback.print_exc()
         else:
             # 桌面平台使用自定义文件浏览器
@@ -561,10 +401,8 @@ class GrayImageApp(MDApp):
             popup.open()
 
     def load_image(self, path):
-        '''加载并处理图片'''
         try:
             self.status_label.text = "加载中..."
-            self.status_label.theme_text_color = "Primary"
             self.original_path = path
 
             img = Image.open(path)
@@ -624,6 +462,7 @@ class GrayImageApp(MDApp):
                 cache_dir = tempfile.gettempdir()
                 save_path = os.path.join(cache_dir, "original.png")
 
+
             self.original_image.save(save_path)
             self.original_img.source = save_path
             self.original_img.reload()
@@ -632,15 +471,12 @@ class GrayImageApp(MDApp):
             self.save_btn.disabled = False
 
             basename = os.path.basename(path)
-            self.status_label.text = f"✓ 已加载: {basename}"
-            self.status_label.theme_text_color = "Success"
+            self.status_label.text = f"已加载: {basename}"
 
         except Exception as e:
-            self.status_label.text = f"❌ 错误: {str(e)}"
-            self.status_label.theme_text_color = "Error"
+            self.status_label.text = f"错误: {str(e)}"
 
     def process_image(self):
-        '''处理图片为灰度图'''
         if self.original_image:
             self.gray_image = self.original_image.convert("L")
 
@@ -685,7 +521,6 @@ class GrayImageApp(MDApp):
             self.gray_img.reload()
 
     def save_image(self, instance):
-        '''保存灰度图片'''
         if self.gray_image:
             if is_android():
                 # Android 上保存（选项 1：让用户选择保存位置）
@@ -713,11 +548,9 @@ class GrayImageApp(MDApp):
                             self.gray_image.save(buffer, format="PNG")
                             file_output_stream.write(buffer.getvalue())
                             file_output_stream.close()
-                            self.status_label.text = "✓ 保存成功!"
-                            self.status_label.theme_text_color = "Success"
+                            self.status_label.text = "保存成功!"
                         except Exception as e:
-                            self.status_label.text = f"❌ 保存错误: {str(e)}"
-                            self.status_label.theme_text_color = "Error"
+                            self.status_label.text = f"保存错误: {str(e)}"
 
                     # 尝试使用 filechooser.save_file()
                     filechooser.save_file(
@@ -746,16 +579,14 @@ class GrayImageApp(MDApp):
                             save_path = os.path.join(pictures_dir, filename)
 
                             self.gray_image.save(save_path)
-                            self.status_label.text = f"✓ 已保存到相册: {filename}"
-                            self.status_label.theme_text_color = "Success"
+                            self.status_label.text = f"已保存到相册: {filename}"
                         else:
-                            self.status_label.text = "❌ 无法访问相册目录"
-                            self.status_label.theme_text_color = "Error"
+                            self.status_label.text = "无法访问相册目录"
 
                     except Exception as e2:
-                        self.status_label.text = f"❌ 保存失败: {str(e2)}"
-                        self.status_label.theme_text_color = "Error"
+                        self.status_label.text = f"保存失败: {str(e2)}"
                         import traceback
+
                         traceback.print_exc()
             else:
                 # 桌面平台原逻辑
@@ -771,11 +602,9 @@ class GrayImageApp(MDApp):
                 final_path = os.path.join(download_path, default_name)
                 try:
                     self.gray_image.save(final_path)
-                    self.status_label.text = f"✓ 已保存到下载目录!"
-                    self.status_label.theme_text_color = "Success"
+                    self.status_label.text = f"已保存到下载目录!"
                 except Exception as e:
-                    self.status_label.text = f"❌ 错误: {str(e)}"
-                    self.status_label.theme_text_color = "Error"
+                    self.status_label.text = f"错误: {str(e)}"
 
 
 if __name__ == "__main__":
