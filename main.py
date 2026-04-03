@@ -9,6 +9,7 @@ import os
 import tempfile
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.button import Button
 from kivy.uix.image import Image as KivyImage
 from kivy.uix.label import Label
@@ -16,7 +17,7 @@ from kivy.uix.popup import Popup
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.gridlayout import GridLayout
 from kivy.core.window import Window
-from PIL import Image
+from PIL import Image, ImageEnhance, ImageFilter
 from datetime import datetime
 
 import platform
@@ -339,6 +340,7 @@ class GrayImageApp(MDApp):
 
         self.original_image = None
         self.gray_image = None
+        self.enhanced_image = None
         self.original_path = None
 
     def build(self):
@@ -458,55 +460,208 @@ class GrayImageApp(MDApp):
         self.original_tab = Tab(title="原图")
         self.original_tab.tab_label.font_size = "16sp"
         self.original_tab.tab_label.theme_text_color = "Primary"
-        self.original_img = KivyImage(
-            source='assets/default_placeholder.png',
-            allow_stretch=True,
-            keep_ratio=True
+        
+        # 创建柔和背景的占位符（使用 FloatLayout 防止图片覆盖背景）
+        original_placeholder = MDFloatLayout(
+            md_bg_color=(0.95, 0.97, 0.99, 1.0)
         )
-        self.original_tab.add_widget(self.original_img)
+        
+        original_placeholder_label = Label(
+            text='图片展示区\n请选择一张图片',
+            font_name=self.chinese_font_name,
+            font_size='18sp',
+            halign='center',
+            color=(0.6, 0.65, 0.7, 1.0),
+            text_size=(None, None),
+            pos_hint={'center_x': 0.5, 'center_y': 0.5},
+            size_hint=(None, None),
+            size=(300, 100)
+        )
+        
+        original_placeholder.add_widget(original_placeholder_label)
+        
+        # 创建实际的图片组件（初始隐藏）
+        self.original_img = KivyImage(
+            opacity=0,
+            allow_stretch=True,
+            keep_ratio=True,
+            pos_hint={'center_x': 0.5, 'center_y': 0.5}
+        )
+        
+        original_placeholder.add_widget(self.original_img)
+        self.original_tab.add_widget(original_placeholder)
+        self.original_placeholder = original_placeholder
 
         # 灰度图选项卡
         self.gray_tab = Tab(title="灰度图")
         self.gray_tab.tab_label.font_size = "16sp"
         self.gray_tab.tab_label.theme_text_color = "Primary"
-        self.gray_img = KivyImage(
-            source='assets/default_placeholder.png',
-            allow_stretch=True,
-            keep_ratio=True
+        
+        # 创建柔和背景的占位符（使用 FloatLayout 防止图片覆盖背景）
+        gray_placeholder = MDFloatLayout(
+            md_bg_color=(0.95, 0.97, 0.99, 1.0)
         )
-        self.gray_tab.add_widget(self.gray_img)
+        
+        gray_placeholder_label = Label(
+            text='灰度图展示区\n点击下方按钮转换',
+            font_name=self.chinese_font_name,
+            font_size='18sp',
+            halign='center',
+            color=(0.6, 0.65, 0.7, 1.0),
+            text_size=(None, None),
+            pos_hint={'center_x': 0.5, 'center_y': 0.5},
+            size_hint=(None, None),
+            size=(300, 100)
+        )
+        
+        gray_placeholder.add_widget(gray_placeholder_label)
+        
+        # 创建实际的图片组件（初始隐藏）
+        self.gray_img = KivyImage(
+            opacity=0,
+            allow_stretch=True,
+            keep_ratio=True,
+            pos_hint={'center_x': 0.5, 'center_y': 0.5}
+        )
+        
+        gray_placeholder.add_widget(self.gray_img)
+        self.gray_tab.add_widget(gray_placeholder)
+        self.gray_placeholder = gray_placeholder
+
+        # 美化图选项卡
+        self.enhanced_tab = Tab(title="美化图")
+        self.enhanced_tab.tab_label.font_size = "16sp"
+        self.enhanced_tab.tab_label.theme_text_color = "Primary"
+        
+        # 创建柔和背景的占位符（使用 FloatLayout 防止图片覆盖背景）
+        enhanced_placeholder = MDFloatLayout(
+            md_bg_color=(0.95, 0.97, 0.99, 1.0)
+        )
+        
+        enhanced_placeholder_label = Label(
+            text='美化图展示区\n点击下方按钮美化',
+            font_name=self.chinese_font_name,
+            font_size='18sp',
+            halign='center',
+            color=(0.6, 0.65, 0.7, 1.0),
+            text_size=(None, None),
+            pos_hint={'center_x': 0.5, 'center_y': 0.5},
+            size_hint=(None, None),
+            size=(300, 100)
+        )
+        
+        enhanced_placeholder.add_widget(enhanced_placeholder_label)
+        
+        # 创建实际的图片组件（初始隐藏）
+        self.enhanced_img = KivyImage(
+            opacity=0,
+            allow_stretch=True,
+            keep_ratio=True,
+            pos_hint={'center_x': 0.5, 'center_y': 0.5}
+        )
+        
+        enhanced_placeholder.add_widget(self.enhanced_img)
+        self.enhanced_tab.add_widget(enhanced_placeholder)
+        self.enhanced_placeholder = enhanced_placeholder
 
         self.tabs.add_widget(self.original_tab)
         self.tabs.add_widget(self.gray_tab)
+        self.tabs.add_widget(self.enhanced_tab)
+        
+        # 绑定 Tab 切换事件
+        self.tabs.bind(on_tab_switch=self.on_tab_switch)
 
         image_card.add_widget(self.tabs)
         image_wrapper.add_widget(image_card)
         main_layout.add_widget(image_wrapper)
 
-        # 5. 保存按钮区域
-        save_wrapper = MDBoxLayout(
+        # 5. 美化和保存按钮区域
+        action_wrapper = MDBoxLayout(
             size_hint_y=None,
             height=90,
             padding=[20, 10, 20, 15]
         )
 
-        self.save_btn = Button(
-            text="💾 保存图片",
+        action_layout = MDBoxLayout(
+            orientation='horizontal',
+            spacing=10
+        )
+
+        self.action_btn = Button(
+            text="一键灰度",
             font_name=self.chinese_font_name,
             font_size="16sp",
-            size_hint_y=None,
+            size_hint_x=0.5,
+            height=55,
+            background_color=(0.3, 0.8, 0.7, 1.0),
+            color=(1, 1, 1, 1),
+            disabled=True
+        )
+        self.action_btn.bind(on_press=self.on_action_button_click)
+        action_layout.add_widget(self.action_btn)
+
+        self.save_btn = Button(
+            text="保存图片",
+            font_name=self.chinese_font_name,
+            font_size="16sp",
+            size_hint_x=0.5,
             height=55,
             background_color=(0.2, 0.8, 0.9, 1.0),
             color=(1, 1, 1, 1),
             disabled=True
         )
         self.save_btn.bind(on_press=self.save_image)
-        save_wrapper.add_widget(self.save_btn)
-        main_layout.add_widget(save_wrapper)
+        action_layout.add_widget(self.save_btn)
+
+        action_wrapper.add_widget(action_layout)
+        main_layout.add_widget(action_wrapper)
 
         self.root.add_widget(main_layout)
 
         return self.root
+
+    def on_tab_switch(self, instance_tabs, instance_tab, instance_tab_label, tab_text):
+        '''Tab 切换事件回调'''
+        if self.original_image is None:
+            # 如果没有加载图片，禁用按钮
+            self.action_btn.disabled = True
+            return
+        
+        # 根据当前 Tab 修改按钮文字
+        if tab_text == "灰度图":
+            self.action_btn.text = "一键灰度"
+            self.action_btn.background_color = (0.3, 0.8, 0.7, 1.0)
+        elif tab_text == "美化图":
+            self.action_btn.text = "一键美化"
+            self.action_btn.background_color = (0.7, 0.5, 0.9, 1.0)
+        else:  # 原图
+            self.action_btn.text = "原图模式"
+            self.action_btn.background_color = (0.5, 0.7, 0.9, 1.0)
+        
+        # 检查是否已经处理过，决定是否启用按钮
+        if tab_text == "灰度图" and self.gray_image is not None:
+            self.action_btn.disabled = False
+        elif tab_text == "美化图" and self.enhanced_image is not None:
+            self.action_btn.disabled = False
+        else:
+            self.action_btn.disabled = False
+
+    def on_action_button_click(self, instance):
+        '''操作按钮点击事件'''
+        current_tab_text = ""
+        
+        # 使用 MDTabs 的 get_current_tab 方法获取当前选项卡
+        current_tab = self.tabs.get_current_tab()
+        
+        # 从当前选项卡获取标题
+        if current_tab:
+            current_tab_text = current_tab.title
+        
+        # 根据当前 Tab 执行相应操作
+        if current_tab_text == "灰度图":
+            self.process_gray()
+        elif current_tab_text == "美化图":
+            self.enhance_image(instance)
 
     def animate_selection(self, instance):
         """选择按钮点击动画效果"""
@@ -549,7 +704,14 @@ class GrayImageApp(MDApp):
         try:
             self.status_label.text = "正在加载图片..."
             self.original_path = path
+            
+            # 确保使用绝对路径
+            if not os.path.isabs(path):
+                path = os.path.abspath(path)
 
+            # 隐藏占位符标签，显示图片组件
+            self.original_img.opacity = 1
+            
             # 直接使用原图路径设置 Image 组件（参考 kivy_mobile_image）
             self.original_img.source = path
             self.original_img.reload()
@@ -576,107 +738,205 @@ class GrayImageApp(MDApp):
             else:
                 self.original_image = img.convert("RGB")
 
-            # 模拟处理延迟显示进度
-            self.status_label.text = "正在处理图片..."
-            from kivy.clock import Clock
-            Clock.schedule_once(self.process_image, 0.1)
+            # 完成加载，启用操作按钮
+            basename = os.path.basename(self.original_path)
+            self.status_label.text = f"✓ 已加载: {basename}"
+            self.action_btn.disabled = False
 
         except Exception as e:
             self.status_label.text = f"错误: {str(e)}"
 
-    def process_image(self, *args):
+    def process_gray(self):
         '''处理图片为灰度图'''
-        if self.original_image:
+        if self.original_image is None:
+            self.status_label.text = "请先选择图片"
+            return
+            
+        if self.gray_image is not None:
+            # 已经处理过了
+            self.status_label.text = "已经转换为灰度图"
+            return
+        
+        try:
             self.status_label.text = "正在转换为灰度图..."
 
             self.gray_image = self.original_image.convert("L")
 
-            # 保存到临时文件并显示（参考 kivy_mobile_image）
+            # 保存到临时文件并显示
             temp_path = 'temp_gray.png'
             self.gray_image.save(temp_path)
+            
+            # 显示灰度图组件
+            self.gray_img.opacity = 1
             self.gray_img.source = temp_path
             self.gray_img.reload()
 
-            # 完成处理
+            # 完成处理，启用保存按钮
             basename = os.path.basename(self.original_path)
-            self.status_label.text = f"✓ 已转换完成: {basename}"
+            self.status_label.text = f"✓ 已转换为灰度图: {basename}"
             self.save_btn.disabled = False
+        except Exception as e:
+            self.status_label.text = f"灰度转换错误: {str(e)}"
+
+    def enhance_image(self, instance):
+        '''一键美化图片'''
+        if self.original_image is None:
+            self.status_label.text = "请先选择图片"
+            return
+            
+        if self.enhanced_image is not None:
+            # 已经处理过了
+            self.status_label.text = "已经美化过图片"
+            return
+
+        try:
+            self.status_label.text = "正在美化图片..."
+            from kivy.clock import Clock
+            Clock.schedule_once(self._do_enhance_image, 0.1)
+        except Exception as e:
+            self.status_label.text = f"美化错误: {str(e)}"
+
+    def _do_enhance_image(self, *args):
+        '''执行图片美化（在时钟回调中）'''
+        try:
+            # 复制原图进行美化
+            image = self.original_image.copy()
+            
+            # 对比度增强 1.2x
+            enhancer = ImageEnhance.Contrast(image)
+            image = enhancer.enhance(1.2)
+            
+            # 亮度调整 1.1x
+            enhancer = ImageEnhance.Brightness(image)
+            image = enhancer.enhance(1.1)
+            
+            # 色彩增强 1.15x
+            enhancer = ImageEnhance.Color(image)
+            image = enhancer.enhance(1.15)
+            
+            # 锐度增强 1.3x
+            enhancer = ImageEnhance.Sharpness(image)
+            image = enhancer.enhance(1.3)
+            
+            self.enhanced_image = image
+            
+            # 保存到临时文件并显示
+            temp_path = 'temp_enhanced.png'
+            self.enhanced_image.save(temp_path)
+            
+            # 显示美化图组件
+            self.enhanced_img.opacity = 1
+            self.enhanced_img.source = temp_path
+            self.enhanced_img.reload()
+            
+            # 完成美化
+            basename = os.path.basename(self.original_path)
+            self.status_label.text = f"✓ 美化完成: {basename}"
+            
+        except Exception as e:
+            self.status_label.text = f"美化失败: {str(e)}"
 
     def save_image(self, instance):
-        '''保存灰度图片'''
-        if self.gray_image:
-            if is_android():
-                try:
-                    from plyer import filechooser
-                    from plyer import storagepath
-                    from io import BytesIO
+        '''保存灰度图片或美化图片'''
+        # 获取当前激活的 Tab
+        current_tab = self.tabs.get_current_tab()
+        if not current_tab:
+            self.status_label.text = "❌ 无法确定当前 Tab"
+            return
+        
+        tab_text = current_tab.title
+        
+        # 根据当前 Tab 决定保存哪个图片
+        image_to_save = None
+        image_type = ""
+        
+        if tab_text == "灰度图":
+            image_to_save = self.gray_image
+            image_type = "灰度图"
+        elif tab_text == "美化图":
+            image_to_save = self.enhanced_image
+            image_type = "美化图"
+        else:
+            self.status_label.text = "❌ 原图无需保存"
+            return
+        
+        if image_to_save is None:
+            self.status_label.text = f"❌ 没有{image_type}可保存，请先处理"
+            return
+        
+        if is_android():
+            try:
+                from plyer import filechooser
+                from plyer import storagepath
+                from io import BytesIO
 
-                    if self.original_path:
-                        base_name = os.path.splitext(
-                            os.path.basename(self.original_path)
-                        )[0]
-                        default_name = f"{base_name}_gray.png"
-                    else:
-                        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                        default_name = f"gray_{timestamp}.png"
-
-                    def save_callback(file_output_stream):
-                        """Android 保存回调函数"""
-                        try:
-                            buffer = BytesIO()
-                            self.gray_image.save(buffer, format="PNG")
-                            file_output_stream.write(buffer.getvalue())
-                            file_output_stream.close()
-                            self.status_label.text = "✓ 保存成功!"
-                        except Exception as e:
-                            self.status_label.text = f"❌ 保存错误: {str(e)}"
-
-                    filechooser.save_file(
-                        title="保存灰度图",
-                        filters=["image"],
-                        default_name=default_name,
-                        callback=save_callback,
-                    )
-
-                except Exception as e:
-                    try:
-                        from plyer import storagepath
-
-                        pictures_dir = storagepath.get_pictures_dir()
-                        if not pictures_dir:
-                            external_dir = storagepath.get_external_storage_dir()
-                            if external_dir:
-                                pictures_dir = os.path.join(external_dir, "Pictures")
-
-                        if pictures_dir and os.path.exists(pictures_dir):
-                            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                            filename = f"gray_{timestamp}.png"
-                            save_path = os.path.join(pictures_dir, filename)
-
-                            self.gray_image.save(save_path)
-                            self.status_label.text = f"✓ 已保存到相册: {filename}"
-                        else:
-                            self.status_label.text = "❌ 无法访问相册目录"
-
-                    except Exception as e2:
-                        self.status_label.text = f"❌ 保存失败: {str(e2)}"
-            else:
                 if self.original_path:
-                    default_name = (
-                        os.path.splitext(os.path.basename(self.original_path))[0]
-                        + "_gray.png"
-                    )
-                    save_path = os.path.join(os.path.dirname(self.original_path), default_name)
+                    base_name = os.path.splitext(
+                        os.path.basename(self.original_path)
+                    )[0]
+                    default_name = f"{base_name}_{image_type}.png"
                 else:
-                    default_name = "gray.png"
-                    download_path = os.path.expanduser("~/Downloads")
-                    save_path = os.path.join(download_path, default_name)
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    default_name = f"{image_type}_{timestamp}.png"
 
+                def save_callback(file_output_stream):
+                    """Android 保存回调函数"""
+                    try:
+                        buffer = BytesIO()
+                        image_to_save.save(buffer, format="PNG")
+                        file_output_stream.write(buffer.getvalue())
+                        file_output_stream.close()
+                        self.status_label.text = "✓ 保存成功!"
+                    except Exception as e:
+                        self.status_label.text = f"❌ 保存错误: {str(e)}"
+
+                filechooser.save_file(
+                    title=f"保存{image_type}",
+                    filters=["image"],
+                    default_name=default_name,
+                    callback=save_callback,
+                )
+
+            except Exception as e:
                 try:
-                    self.gray_image.save(save_path)
-                    self.status_label.text = f"✓ 已保存: {os.path.basename(save_path)}"
-                except Exception as e:
-                    self.status_label.text = f"❌ 错误: {str(e)}"
+                    from plyer import storagepath
+
+                    pictures_dir = storagepath.get_pictures_dir()
+                    if not pictures_dir:
+                        external_dir = storagepath.get_external_storage_dir()
+                        if external_dir:
+                            pictures_dir = os.path.join(external_dir, "Pictures")
+
+                    if pictures_dir and os.path.exists(pictures_dir):
+                        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                        filename = f"{image_type}_{timestamp}.png"
+                        save_path = os.path.join(pictures_dir, filename)
+
+                        image_to_save.save(save_path)
+                        self.status_label.text = f"✓ 已保存到相册\n{save_path}"
+                    else:
+                        self.status_label.text = "❌ 无法访问相册目录"
+
+                except Exception as e2:
+                    self.status_label.text = f"❌ 保存失败: {str(e2)}"
+        else:
+            if self.original_path:
+                default_name = (
+                    os.path.splitext(os.path.basename(self.original_path))[0]
+                    + f"_{image_type}.png"
+                )
+                save_path = os.path.join(os.path.dirname(self.original_path), default_name)
+            else:
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                default_name = f"{image_type}_{timestamp}.png"
+                download_path = os.path.expanduser("~/Downloads")
+                save_path = os.path.join(download_path, default_name)
+
+            try:
+                image_to_save.save(save_path)
+                self.status_label.text = f"✓ 已保存\n{save_path}"
+            except Exception as e:
+                self.status_label.text = f"❌ 错误: {str(e)}"
 
 
 if __name__ == "__main__":
