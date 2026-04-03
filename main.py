@@ -47,7 +47,7 @@ def get_chinese_font():
         # macOS 优先使用系统字体
         fonts = [
             "/System/Library/Fonts/PingFang.ttc",
-            "/System/Library/FontsFonts.STHeiti Medium.ttc",
+            "/System/Library/Fonts/STHeiti Medium.ttc",
             "/System/Library/Fonts/Hiragino Sans GB.ttc",
             "/System/Library/Fonts/STHeiti Light.ttc"
         ]
@@ -292,7 +292,7 @@ class FileBrowserPopup(Popup):
                 continue
             full_path = os.path.join(self.current_path, item)
             if os.path.isdir(full_path):
-                dirs.append.append((item, full_path))
+                dirs.append((item, full_path))
             else:
                 ext = os.path.splitext(item)[1]
                 if ext in IMAGE_EXTS:
