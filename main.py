@@ -26,7 +26,7 @@ from kivy.utils import platform as kivy_platform
 from kivymd.app import MDApp
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.button import MDRaisedButton, MDFloatingActionButton
-from kivymd.uix.label import MDLabel
+from kivymd.uix.label import MDLabel, MDIcon
 from kivymd.uix.card import MDCard
 from kivymd.uix.tab import MDTabs, MDTabsBase
 from kivymd.uix.floatlayout import MDFloatLayout
@@ -384,12 +384,14 @@ class GrayImageApp(MDApp):
             spacing=12
         )
 
-        title_icon = Label(
-            text="📷",
+        title_icon = MDIcon(
+            icon="camera",
             font_size="28sp",
             halign="center",
             size_hint_x=None,
-            width=55
+            width=55,
+            theme_text_color="Custom",
+            text_color=(1, 1, 1, 1)
         )
 
         title_label = Label(
@@ -465,16 +467,12 @@ class GrayImageApp(MDApp):
             padding=10
         )
 
-        # 创建选项卡
-        self.tabs = MDTabs()
+        # 创建选项卡 - 设置中文字体
+        self.tabs = MDTabs(font_name=self.chinese_font_name)
         self.tabs.default_tab = 0
-
-        # 注册选项卡中文字体
-        tab_font = self.chinese_font_name
 
         # 原图选项卡
         self.original_tab = Tab(title="原图")
-        self.original_tab.tab_label.font_name = tab_font
         self.original_tab.tab_label.font_size = "16sp"
         self.original_tab.tab_label.theme_text_color = "Primary"
         self.original_img = KivyImage()
@@ -482,7 +480,6 @@ class GrayImageApp(MDApp):
 
         # 灰度图选项卡
         self.gray_tab = Tab(title="灰度图")
-        self.gray_tab.tab_label.font_name = tab_font
         self.gray_tab.tab_label.font_size = "16sp"
         self.gray_tab.tab_label.theme_text_color = "Primary"
         self.gray_img = KivyImage()
@@ -762,20 +759,22 @@ class GrayImageApp(MDApp):
                         self.status_label.theme_text_color = "Error"
                         import traceback
                         traceback.print_exc()
-                # 桌面平台原逻辑
+            else:
+                # 桌面平台保存逻辑
                 if self.original_path:
                     default_name = (
                         os.path.splitext(os.path.basename(self.original_path))[0]
                         + "_gray.png"
                     )
+                    save_path = os.path.join(os.path.dirname(self.original_path), default_name)
                 else:
                     default_name = "gray.png"
+                    download_path = os.path.expanduser("~/Downloads")
+                    save_path = os.path.join(download_path, default_name)
 
-                download_path = os.path.expanduser("~/Downloads")
-                final_path = os.path.join(download_path, default_name)
                 try:
-                    self.gray_image.save(final_path)
-                    self.status_label.text = f"✓ 已保存到下载目录!"
+                    self.gray_image.save(save_path)
+                    self.status_label.text = f"✓ 已保存: {os.path.basename(save_path)}"
                     self.status_label.theme_text_color = "Primary"
                 except Exception as e:
                     self.status_label.text = f"❌ 错误: {str(e)}"
