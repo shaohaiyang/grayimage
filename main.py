@@ -7,6 +7,7 @@
 import sys
 import os
 import tempfile
+from urllib.parse import urlparse, unquote
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.floatlayout import FloatLayout
@@ -947,27 +948,44 @@ class GrayImageApp(MDApp):
             context = currentActivity.getApplicationContext()
             
             content_resolver = context.getContentResolver()
+            # 1. 初始默认值
+            parent_dir = "/storage/emulated/0/Pictures" 
+            base_name = None
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            display_name = f"{image_type.lower()}_{timestamp}.png"
             
             if self.original_path:
-                path = self.original_path
-                path = path.replace("file://", "")
-                path = path.replace("content://", "")
-                if path.startswith("/storage/emulated/0"):
-                    path = path.replace("/storage/emulated/0", "")
-                
-                if os.path.dirname(path):
-                    parent_dir = os.path.dirname(path)
-                    base_name = os.path.splitext(os.path.basename(path))[0]
+                # 手机相册路径如 file:///storage/emulated/0/DCIM/My%20Photo.jpg
+                decoded_path = unquote(urlparse(self.original_path).path)
+                # 3. 针对不同类型的路径进行逻辑判断
+                if self.original_path.startswith("content://"):
+                    # content:// 是虚拟路径，无法直接获取物理父目录
+                    # 严谨做法：保持默认 Pictures 目录，尝试从 URI 末尾提取文件名
+                    base_name = decoded_path.split("/")[-1]
+                elif self.original_path.startswith("file://") or decoded_path.startswith("/"):
+                    # 去掉 file:// 后剩下的就是纯物理路径
+                    clean_path = decoded_path
+        
+                    # 检查路径是否存在且可读
+                    if os.path.exists(clean_path):
+                        parent_dir = os.path.dirname(clean_path)
+                        # 获取不带后缀的文件名
+                        base_name = os.path.splitext(os.path.basename(clean_path))[0]
+                    else:
+                        # 如果路径不存在（可能在沙盒外），尝试提取文件名
+                        base_name = os.path.splitext(os.path.basename(clean_path))[0]
+
+                # 4. 生成最终文件名
+                if base_name and base_name.strip():
                     display_name = f"{base_name}_{image_type.lower()}.png"
                 else:
-                    parent_dir = "Pictures"
-                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                    display_name = f"{image_type}_{timestamp}.png"
-            else:
-                parent_dir = "Pictures"
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                display_name = f"{image_type}_{timestamp}.png"
-            
+                    display_name = f"{image_type.lower()}_{timestamp}.png"
+
+                # 5. 权限补丁：如果解析出的目录不可写（Android 10+ 分区存储限制）
+                # 强制切回应用通常有权操作的公共目录
+                if not os.access(parent_dir, os.W_OK):
+                    parent_dir = "/storage/emulated/0/Pictures" 
+
             ContentValues = autoclass('android.content.ContentValues')
             values = ContentValues()
             
