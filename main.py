@@ -869,19 +869,10 @@ class GrayImageApp(MDApp):
             return
         
         if is_android():
-            if self.original_path:
-                base_name = os.path.splitext(
-                    os.path.basename(self.original_path)
-                )[0]
-                default_name = f"{base_name}_{image_type}.png"
-            else:
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                default_name = f"{image_type}_{timestamp}.png"
-
-            success, result = self.save_to_android_media_store(image_to_save, default_name)
+            success, result = self.save_to_android_media_store(image_to_save, image_type)
             
             if success:
-                self.status_label.text = f"✓ 已保存到相册\n{default_name}"
+                self.status_label.text = f"✓ 已保存到相册\n{result}"
             else:
                 try:
                     from plyer import storagepath
@@ -945,42 +936,65 @@ class GrayImageApp(MDApp):
         
         self.save_btn.disabled = True
 
-    def save_to_android_media_store(self, image, filename):
-        """使用 Android MediaStore API 保存图片到相册"""
+    def save_to_android_media_store(self, image, image_type):
+        """使用 Android MediaStore API 保存图片到原图所在目录"""
         try:
             from jnius import autoclass, cast
             from android import activity
             
-            PythonActivity = autoclass('org.kivy.android.PythonPythonActivity')
+            PythonActivity = autoclass('org.kivy.android.PythonActivity')
             currentActivity = PythonActivity.mActivity
             context = currentActivity.getApplicationContext()
             
             content_resolver = context.getContentResolver()
             
+            if self.original_path:
+                path = self.original_path
+                path = path.replace("file://", "")
+                path = path.replace("content://", "")
+                if path.startswith("/storage/emulated/0"):
+                    path = path.replace("/storage/emulated/0", "")
+                
+                if os.path.dirname(path):
+                    parent_dir = os.path.dirname(path)
+                    base_name = os.path.splitext(os.path.basename(path))[0]
+                    display_name = f"{base_name}_{image_type.lower()}.png"
+                else:
+                    parent_dir = "Pictures"
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    display_name = f"{image_type}_{timestamp}.png"
+            else:
+                parent_dir = "Pictures"
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                display_name = f"{image_type}_{timestamp}.png"
+            
             ContentValues = autoclass('android.content.ContentValues')
             values = ContentValues()
             
             MediaStore = autoclass('android.provider.MediaStore$Images$Media')
-            values.put(MediaStore.DISPLAY_NAME, filename)
+            values.put(MediaStore.DISPLAY_NAME, display_name)
             values.put(MediaStore.MIME_TYPE, "image/png")
-            values.put(MediaStore.RELATIVE_PATH, "Pictures/GrayImage")
+            values.put(MediaStore.RELATIVE_PATH, parent_dir)
             
             uri = content_resolver.insert(MediaStore.EXTERNAL_CONTENT_URI, values)
             
-            OutputStream = autoclass('java.io.FileOutputStream')
-            ParcelFileDescriptor = autoclass('android.os.ParcelFileDescriptor')
-            pfd = content_resolver.openFileDescriptor(uri, "w")
-            output_stream = OutputStream(pfd.getFileDescriptor())
-            
-            from io import BytesIO
-            buffer = BytesIO()
-            image.save(buffer, format="PNG")
-            output_stream.write(buffer.getvalue())
-            
-            output_stream.close()
-            pfd.close()
-            
-            return True, uri.toString()
+            if uri:
+                OutputStream = autoclass('java.io.FileOutputStream')
+                ParcelFileDescriptor = autoclass('android.os.ParcelFileDescriptor')
+                pfd = content_resolver.openFileDescriptor(uri, "w")
+                output_stream = OutputStream(pfd.getFileDescriptor())
+                
+                from io import BytesIO
+                buffer = BytesIO()
+                image.save(buffer, format="PNG")
+                output_stream.write(buffer.getvalue())
+                
+                output_stream.close()
+                pfd.close()
+                
+                return True, display_name
+            else:
+                return False, "Failed to insert into MediaStore"
             
         except Exception as e:
             import traceback
