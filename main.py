@@ -704,6 +704,9 @@ class GrayImageApp(MDApp):
         '''加载并处理图片'''
         try:
             self.status_label.text = "正在加载图片..."
+            
+            self.clear_processed_images()
+            
             self.original_path = path
             
             # 确保使用绝对路径
@@ -866,44 +869,20 @@ class GrayImageApp(MDApp):
             return
         
         if is_android():
-            try:
-                from plyer import filechooser
-                from plyer import storagepath
-                from io import BytesIO
+            if self.original_path:
+                base_name = os.path.splitext(
+                    os.path.basename(self.original_path)
+                )[0]
+                default_name = f"{base_name}_{image_type}.png"
+            else:
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                default_name = f"{image_type}_{timestamp}.png"
 
-                if self.original_path:
-                    base_name = os.path.splitext(
-                        os.path.basename(self.original_path)
-                    )[0]
-                    default_name = f"{base_name}_{image_type}.png"
-                else:
-                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                    default_name = f"{image_type}_{timestamp}.png"
-
-                def save_callback(file_output_stream):
-                    """Android 保存回调函数"""
-                    from kivy.clock import Clock
-                    
-                    def do_save(dt):
-                        try:
-                            buffer = BytesIO()
-                            image_to_save.save(buffer, format="PNG")
-                            file_output_stream.write(buffer.getvalue())
-                            file_output_stream.close()
-                            self.status_label.text = "✓ 保存成功!"
-                        except Exception as e:
-                            self.status_label.text = f"❌ 保存错误: {str(e)}"
-                    
-                    Clock.schedule_once(do_save, 0)
-
-                filechooser.save_file(
-                    title=f"保存{image_type}",
-                    filters=["image"],
-                    default_name=default_name,
-                    callback=save_callback,
-                )
-
-            except Exception as e:
+            success, result = self.save_to_android_media_store(image_to_save, default_name)
+            
+            if success:
+                self.status_label.text = f"✓ 已保存到相册\n{default_name}"
+            else:
                 try:
                     from plyer import storagepath
 
@@ -921,7 +900,7 @@ class GrayImageApp(MDApp):
                         image_to_save.save(save_path)
                         self.status_label.text = f"✓ 已保存到相册\n{save_path}"
                     else:
-                        self.status_label.text = "❌ 无法访问相册目录"
+                        self.status_label.text = f"❌ 保存失败: {result}"
 
                 except Exception as e2:
                     self.status_label.text = f"❌ 保存失败: {str(e2)}"
@@ -943,6 +922,70 @@ class GrayImageApp(MDApp):
                 self.status_label.text = f"✓ 已保存\n{save_path}"
             except Exception as e:
                 self.status_label.text = f"❌ 错误: {str(e)}"
+
+    def clear_processed_images(self):
+        """清除已处理的图片状态"""
+        self.gray_image = None
+        self.enhanced_image = None
+        
+        for temp_file in ['temp_gray.png', 'temp_enhanced.png']:
+            if os.path.exists(temp_file):
+                try:
+                    os.remove(temp_file)
+                except:
+                    pass
+        
+        self.gray_img.source = ''
+        self.gray_img.opacity = 0
+        self.gray_img.reload()
+        
+        self.enhanced_img.source = ''
+        self.enhanced_img.opacity = 0
+        self.enhanced_img.reload()
+        
+        self.save_btn.disabled = True
+
+    def save_to_android_media_store(self, image, filename):
+        """使用 Android MediaStore API 保存图片到相册"""
+        try:
+            from jnius import autoclass, cast
+            from android import activity
+            
+            PythonActivity = autoclass('org.kivy.android.PythonPythonActivity')
+            currentActivity = PythonActivity.mActivity
+            context = currentActivity.getApplicationContext()
+            
+            content_resolver = context.getContentResolver()
+            
+            ContentValues = autoclass('android.content.ContentValues')
+            values = ContentValues()
+            
+            MediaStore = autoclass('android.provider.MediaStore$Images$Media')
+            values.put(MediaStore.DISPLAY_NAME, filename)
+            values.put(MediaStore.MIME_TYPE, "image/png")
+            values.put(MediaStore.RELATIVE_PATH, "Pictures/GrayImage")
+            
+            uri = content_resolver.insert(MediaStore.EXTERNAL_CONTENT_URI, values)
+            
+            OutputStream = autoclass('java.io.FileOutputStream')
+            ParcelFileDescriptor = autoclass('android.os.ParcelFileDescriptor')
+            pfd = content_resolver.openFileDescriptor(uri, "w")
+            output_stream = OutputStream(pfd.getFileDescriptor())
+            
+            from io import BytesIO
+            buffer = BytesIO()
+            image.save(buffer, format="PNG")
+            output_stream.write(buffer.getvalue())
+            
+            output_stream.close()
+            pfd.close()
+            
+            return True, uri.toString()
+            
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return False, str(e)
 
 
 if __name__ == "__main__":
